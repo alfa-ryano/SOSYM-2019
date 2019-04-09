@@ -43,7 +43,7 @@
           <y:Geometry height="59.94294668674672" width="73.0" x="603.8746301752437" y="275.8652092825854"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.92626953125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="63.9853515625" x="4.50732421875" y="3.0">Berzerker<y:LabelModel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.92626953125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="45.15185546875" x="13.924072265625" y="3.0">Knight<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
             </y:LabelModel>
             <y:ModelParameter>
@@ -52,7 +52,7 @@
           </y:NodeLabel>
           <y:UML clipContent="false" constraint="" omitDetails="false" stereotype="" use3DEffect="false">
             <y:AttributeLabel/>
-            <y:MethodLabel> </y:MethodLabel>
+            <y:MethodLabel> smash()</y:MethodLabel>
           </y:UML>
         </y:UMLClassNode>
       </data>
@@ -64,7 +64,7 @@
           <y:Geometry height="59.94294668674672" width="73.0" x="428.7603992880582" y="275.8652092825854"/>
           <y:Fill hasColor="false" transparent="false"/>
           <y:BorderStyle color="#000000" type="line" width="1.0"/>
-          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.92626953125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="32.16455078125" x="20.417724609375" y="3.0">Troll<y:LabelModel>
+          <y:NodeLabel alignment="center" autoSizePolicy="content" fontFamily="Dialog" fontSize="13" fontStyle="bold" hasBackgroundColor="false" hasLineColor="false" height="19.92626953125" horizontalTextPosition="center" iconTextGap="4" modelName="custom" textColor="#000000" verticalTextPosition="bottom" visible="true" width="34.341796875" x="19.3291015625" y="3.0">Ogre<y:LabelModel>
               <y:SmartNodeLabelModel distance="4.0"/>
             </y:LabelModel>
             <y:ModelParameter>
@@ -99,12 +99,12 @@
         </y:UMLClassNode>
       </data>
     </node>
-    <edge id="e0" source="n3" target="n0">
+    <edge id="e0" source="n1" target="n0">
       <data key="d8"/>
       <data key="d10">
         <y:PolyLineEdge>
-          <y:Path sx="0.0" sy="0.0" tx="0.0" ty="21.031194608826382">
-            <y:Point x="727.9317456188364" y="264.3969591059588"/>
+          <y:Path sx="3.702649824756236" sy="0.35531737404136265" tx="0.0" ty="21.031194608826382">
+            <y:Point x="644.07728" y="264.3969591059588"/>
             <y:Point x="596.5960724534475" y="264.3969591059588"/>
           </y:Path>
           <y:LineStyle color="#000000" type="line" width="1.0"/>

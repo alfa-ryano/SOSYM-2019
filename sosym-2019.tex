@@ -121,7 +121,7 @@
     emph={
         var, new, for, in, create, set, with, type, at,
         unset, to, add, remove, delete, register, move,
-        from, position, from, move-within, session, \.
+        from, position, from, move-within, session, comp, composite, \.
     }
 }
 
@@ -325,6 +325,12 @@ Thus, $ds_{1}$ =  [\textsf{x}, \textsf{x}, \textsf{name}, \textsf{name}, 0, 0, `
     \label{fig:xmi_comparison}
 \end{figure}
 
+\begin{figure*}[t]
+    \includegraphics[width=\linewidth]{TreeClassDiagram}
+    \caption{A class diagram showing the core components of the change-based approach to speed up model comparison.}
+    \label{fig:approach_class_diagram}
+\end{figure*}
+
 \section{Change-based Approach for Comparing Models}
 \label{sec:change_based_approach_for_comparing_models}
 
@@ -332,24 +338,21 @@ Now lets consider the same example in a CBP setting.
 The changes made by Bob and Alice are appended to the their local original CBP producing two different CBP representations as displayed in Listings \ref{lst:leftcbp} and \ref{lst:rightcbp}\footnote{Both CBPs only present the changes after the last line of the original version (start from line 12).} -- capturing different courses of modification made by the two modellers.
 Then the example is the same with Alice committing her changes and Bob wanting to merge Alice's work with his. 
 
+\vspace{-10pt}
+\begin{lstlisting}[firstnumber=12,style=eol,caption={The appended changes made by Bob to produce the model in Fig. \ref{fig:left} (left version).},label=lst:leftcbp]
+set x.name from "Math" to "MathLib"
+create d type Operation
+set d.name to "sqrt"
+add d to x.operations at 1
+remove b in x.operations at 2
+delete b
+\end{lstlisting}
 
-\begin{minipage}[t]{0.49\linewidth}    
-    \begin{lstlisting}[firstnumber=12,style=eol,caption={The appended changes made by Bob to produce the model in Fig. \ref{fig:left} (left version).},label=lst:leftcbp]
-    set x.name from "Math" to "MathLib"
-    create d type Operation
-    set d.name to "sqrt"
-    add d to x.operations at 1
-    remove b in x.operations at 2
-    delete b
-    \end{lstlisting}
-\end{minipage}
-\hfill
-\begin{minipage}[t]{0.49\linewidth}
-    \begin{lstlisting}[firstnumber=12,style=eol,caption={The appended changes made by Alice to produce the model in Fig. \ref{fig:right} (right version).},label=lst:rightcbp]
-    move a in x.operations from 0 to 2
-    set x.name from "Math" to "MathUtil"
-    \end{lstlisting}
-\end{minipage}
+\vspace{-15pt}
+\begin{lstlisting}[firstnumber=12,style=eol,caption={The appended changes made by Alice to produce the model in Fig. \ref{fig:right} (right version).},label=lst:rightcbp]
+move a in x.operations from 0 to 2
+set x.name from "Math" to "MathUtil"
+\end{lstlisting}
 
 %Since both modellers work using CBP, we can exploit the representation to improve the previous model comparison.
 %For example, we do not need to visit, match, and differentiate both \textsf{c} elements in the running example as they are not affected by the recent changes in both CBPs; only the affected features by the recent changes to be compared -- not all features. 
@@ -358,13 +361,6 @@ Further, comparison is not performed over all the elements of the model; instead
 The last set of changes can be easily identified by finding their last common change.
 A simplified class diagram of our approach's implementation\footnote{The source can be found at \url{https://github.com/epsilonlabs/emf-cbp}.} is depicted in Fig. \ref{fig:approach_class_diagram}. 
 Next, we describe the three phases in detail.
-
-\begin{figure}
-    \includegraphics[width=\linewidth]{TreeClassDiagram}
-    \caption{A class diagram showing the core components of the change-based approach to speed up model comparison.}
-    \label{fig:approach_class_diagram}
-\end{figure}
-
 
 \subsection{Event Loading}
 \label{sec:event_loading}
@@ -403,7 +399,7 @@ To better understand the construction of an element tree from change events, we 
 \subsubsection{Left Side}\label{sec:left_side}
 %In List. \ref{lst:leftcbp}, 
 
-From the first event [\texttt{\small \textbf{set} x.name \textbf{from} "Math" \textbf{to} "MathLib"}] at line 12, we can identify that an element with id \textsf{x} has existed from the original model. 
+From the first event at line 12, [\texttt{\small \textbf{set} x.name \textbf{from} "Math" \textbf{to} "MathLib"}], we can identify that an element with id \textsf{x} has existed from the original model. 
 %\dk{Incomplete sentence?}
 It has a feature \textsf{name} with a value ``Math'' in the original model that has been changed to ``MathLib'' in the left model. Since the element \textsf{x} does not already exist in the \textsf{elementTree}, we create its instance of \textsf{Element} and also its feature \textsf{name}. We set the value of the feature \textsf{name} to ``MathLib'' and also set it to ``Math'' in the partial state of the original model -- it has not been set before. As this feature on the right side also has not been set, we set it to ``Math'' as well. 
 %Once a feature in the original state has been set, it cannot be overridden -- using the flag \textsf{isOldSet} in class \textsf{Feature} in Fig. \ref{fig:approach_class_diagram}. 
@@ -416,7 +412,7 @@ We perform the same procedure to also add element \textsf{b} to the right state 
 
 Fig. \ref{fig:left_element_tree_diagram} illustrates the state of the \textsf{elementTree} after all left change events have been processed. As can be seen, the \textsf{elementTree} exhibits the partial states of the original, left, and right models at once. 
 
-\subsubsection{Right Side}\label{sec:right_side}  From the first event [\texttt{\small \textbf{move} a \textbf{in} x.operations \textbf{from} 0 \textbf{to} 2}] at line 12, we can infer that in the right model there is an element with id \textsf{a} positioned at index 2 in the element \textsf{x}'s feature \textsf{operations}. Thus, element \textsf{a} -- an instance of class \textsf{Element} in \ref{fig:approach_class_diagram} -- is added to the \textsf{elementTree} and positioned at index 2 of the element \textsf{x}'s feature \textsf{operations}. Since the event is a \textsf{move} type and the new index is larger than its previous index, elements that are between its previous and new indexes are shifted one place down. As element \textsf{b} has already existed in the same feature (the element was added during the process of the left change events) and its index is between element \textsf{a}'s movement, the index of element \textsf{b} is shifted down from 1 to 0. 
+\subsubsection{Right Side}\label{sec:right_side}  From the first event at line 12, [\texttt{\small \textbf{move} a \textbf{in} x.operations \textbf{from} 0 \textbf{to} 2}], we can infer that in the right model there is an element with id \textsf{a} positioned at index 2 in the element \textsf{x}'s feature \textsf{operations}. Thus, element \textsf{a} -- an instance of class \textsf{Element} in \ref{fig:approach_class_diagram} -- is added to the \textsf{elementTree} and positioned at index 2 of the element \textsf{x}'s feature \textsf{operations}. Since the event is a \textsf{move} type and the new index is larger than its previous index, elements that are between its previous and new indexes are shifted one place down. As element \textsf{b} has already existed in the same feature (the element was added during the process of the left change events) and its index is between element \textsf{a}'s movement, the index of element \textsf{b} is shifted down from 1 to 0. 
 
 Also since the event's type is \textsf{move} and its previous index is 0 and it is the first event that changes the index of element \textsf{a}, these conditions imply that element \textsf{a} in the original model is positioned at index 0 in the element \textsf{x}'s feature \textsf{operations}. Therefore, we add the element \textsf{a} to element \textsf{x}'s feature \textsf{operations} in the original state of the \textsf{elementTree}. Since the index 0 in the element \textsf{x}'s feature \textsf{operations} has not been set, we also add element \textsf{a} to that index in the right state of the \textsf{elementTree}. From the last event [\texttt{\small \textbf{set} a.name \textbf{from} "Math" \textbf{to} "MathUtil"}] at line 13, we can infer that in the right model, the value of element \textsf{a}'s feature \textsf{name} is ``MathUtil''. Hence, we set the feature \textsf{name} to ``MathUtil'' in the right state. 
 We do not apply this operation to the original and left states as they have been set before.
@@ -424,7 +420,7 @@ Fig. \ref{fig:right_element_tree_diagram} exhibits the state of the \textsf{elem
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.7\linewidth]{TreeConstruction}
+    \includegraphics[width=\linewidth]{TreeConstruction}
     \caption{Steps in Element Tree construction.}
     \label{fig:tree_construction}
 \end{figure} 
@@ -468,8 +464,8 @@ the partial state of the left model (step 6), implying that $I_{LL} \cup I_{OR} 
                 $oldIndexes$ $\leftarrow$ calculateOldIndex($featureEventList$, $previousIndex$, $side$)\;
                 \If{\Not isCreated($value$, $side$) \AndA \Not isOldValueSet($feature$, $previousValue$, $previousIndex$, $side$)} {
                     setOldValue($feature$, $previousValue$, $oldIndex$, $side$)\;
-                    $oppositeFeatureEventList$ $\leftarrow$ getOppositeFeatureEventList($feature$, $side$)\;
-                    $oppositeIndex$ $\leftarrow$ calculateOppositeIndex($oppositeFeatureEventList$, $oldIndex$, $side$)\;
+                    $oppFeaEventList$ $\leftarrow$ getOppFeaEventList($feature$, $side$)\;
+                    $oppositeIndex$ $\leftarrow$ calculateOppositeIndex($oppFeaEventList$, $oldIndex$, $side$)\;
                     \If{\Not isDeleted($value$, $side$) \AndA \Not isOppositeSideValueSet($feature$, $value$, $oppositeIndex$, $side$)} {
                         setOppositeSideValue($feature$, $value$, $oppositeIndex$, $side$)\;
                     }
@@ -531,12 +527,12 @@ Using the \textsf{elementTree} presented in Fig. \ref{fig:right_element_tree_dia
 \end{algorithm}
 \DecMargin{1.5em}
 
-The first rule (Rule 1) in Alg. \ref{alg:diff_rules} is to identify changes in single-valued attributes. A feature has to be of type \textsf{attribute}, both side values have to be different, and the element should have not been created or deleted in both models. The second rule (Rule 2) identifies whether an element is in a different location in both models. The element must not have been deleted and must exist from the the previous version -- the original model. Also, its containers, containing features, or indexes of the element have to be different on both sides.
+The first rule (Rule 1) in Alg. \ref{alg:diff_rules} is to identify changes in single-valued attributes. A feature has to be of type \textsf{attribute}, both side values have to be different, and the element should have not been created or deleted in both models. The second rule (Rule 2) identifies whether an element is in a different location in both models. The element must not have been deleted and must exist from the previous version -- the original model. Also, its containers, containing features, or indexes of the element have to be different on both sides.
 
 We illustrate the principles and use of rules by discussing the rules used to identify differences in the running example, which can be found in Alg. \ref{alg:diff_rules}. The algorithm is the breakdown of the function \textsf{identifyDiffUsingRules} in Alg. \ref{alg:diff_calculation}. As previously stated, it is important to remember that we use the left model as a reference which means the differences are presented as changes that transform the right model to become equal to the left model. 
 
 \IncMargin{1.5em}
-\begin{algorithm}
+\begin{algorithm*}
     \begin{footnotesize}
         \SetKwInOut{Input}{input}
         \SetKwInOut{Output}{output}
@@ -569,7 +565,7 @@ We illustrate the principles and use of rules by discussing the rules used to id
     \end{footnotesize}
     \caption{Some rules to determine differences.}
     \label{alg:diff_rules}
-\end{algorithm}
+\end{algorithm*}
 \DecMargin{1.5em}
 
 The third rule (Rule 3) identifies the deletion of an element. If an element in the left model is not created but exists in the model, it means that the element has been there from the previous version -- the original model. This also means that the element also exists in the right model, unless it has been deleted. Thus, in order to make the right model equals to the left model, the element has to be deleted also in the right model. The fourth rule (Rule 4) identifies the need for an addition of an element. If an element is created in the left model and has not been deleted, it means that the element should be added also to the right model to make both models equal.
@@ -582,19 +578,122 @@ Element \textsf{b} used to exist but has been deleted from the left model (flags
 
 Similar to the state-based approach in Section \ref{sec:model_differencing}, we express identified differences as $dc_{n}$ = [ $LeftContainer_n$ , $RightContainer_n$ , $LeftFeature_n$ , $RightFeature_n$ , $LeftIndex_n$ , $RightIndex_n$, $LeftValue_n$, $RightValue_n$, $Kind_n$]. Thus, $dc_{1}$ =  [\textsf{x}, \textsf{x}, \textsf{name}, \textsf{name}, 0, 0, ``MathLib'', ``Mathutil'', \textsf{CHANGE}], $dc_{2}$ = [\textsf{x}, \textsf{x}, \textsf{operations}, \textsf{operations}, ?, 0, ?, \textsf{b}, \textsf{DELETE}], $dc_{3}$ = [\textsf{x}, \textsf{x}, \textsf{operations}, \textsf{operations}, 1, ?, \textsf{d}, ?, \textsf{ADD}], and $dc_{4}$ = [\textsf{x}, \textsf{x}, \textsf{operations}, \textsf{operations}, 0, 2, \textsf{a}, \textsf{a}, \textsf{MOVE}]. This change-based approach might produce differences that are different from differences that the state-based approach produces. This can be seen between by comparing $ds_{4}$ and $dc_{4}$ ($ds_{4}$ $\neq$ $dc_{4}$, [\textsf{x}, \textsf{x}, \textsf{operations}, \textsf{operations}, 2, 1, \textsf{c}, \textsf{c}, \textsf{MOVE}] $\neq$ [\textsf{x}, \textsf{x}, \textsf{operations}, \textsf{operations}, 0, 2, \textsf{a}, \textsf{a}, \textsf{MOVE}]). In the state-based approach, element \textsf{c} has a \textsf{MOVE} difference -- it has different index ($ds_{4}$), while in the change-based approach, this difference is attributed to element \textsf{a} ($dc_{4}$). However, in both approaches, if we resolve their differences by performing all-left-to-right merging  -- making the right model equal to the left model, both approaches produce two models that are equivalent. In this way, we can check the correctness of the identified differences produced by the change-based approach.
 
+\begin{figure*}
+    \begin{tabular}{l|c|r}
+        \begin{subfigure}[t]{0.31\linewidth}
+            \includegraphics[width=\linewidth]{class_diagram_origin}
+            \caption{original version (Jane's version)}
+            \label{fig:class_diagram_origin}
+        \end{subfigure}
+        &
+        \begin{subfigure}[t]{0.31\linewidth}
+            \includegraphics[width=\linewidth]{class_diagram_left}
+            \caption{left version (Bob's version)}
+            \label{fig:class_diagram_left}
+        \end{subfigure}
+        &
+        \begin{subfigure}[t]{0.31\linewidth}
+            \includegraphics[width=\linewidth]{class_diagram_right}
+            \caption{right version (Alice's version)}
+            \label{fig:class_diagram_right}
+        \end{subfigure}
+    \end{tabular}
+    \caption{Three class diagrams of a Role Playing Game.}
+    \label{fig:class_diagram_rpg}
+\end{figure*}
+
+\section{Another Running Example}
+\label{sec:another_running_example}
+In this section, we introduce another running example to explain how to detect conflicts using the element tree. We use this example to construct a new element tree and to explain how conflict detection is performed in EMF Compare, EMF Store, and our change-based conflict detection. Let's say that there is a project to develop a Role Playing Game (RPG). Jane, as the technical leader, set up the initial model. The records of events during setting up the initial is recorded in the CBP in List. \ref{fig:class_diagram_origin}. From the List., we know that she created a class \textsf{Character} that contains an operation \textsf{attack} with three parameters: \textsf{gem}, \textsf{target}, and \textsf{weapon} (lines 1-14). She also created four other classes; \textsf{Troll} (lines 15-16), \textsf{Giant} (lines 17-21), \textsf{Knight} (lines 22-26), and \textsf{Mage} (lines 27-28). She then pushed her work to a change-based version control system. If her work is visualised in state-based format, the model looks like in Fig. \ref{fig:class_diagram_origin}.
+
+\begin{lstlisting}[firstnumber=1,style=eol,caption={The recorded events to produce the original model in Fig. \ref{fig:class_diagram_origin} (original version).},label=lst:cbp_origin]
+create character type Class
+set character.name to "Character" 
+create attack type Operation
+set attack.name to "attack" 
+add attack to character.operations at 0
+create gem type Parameter
+set gem.name to "gem" 
+add gem to attack.parameters at 0
+create target type Parameter
+set target.name to "target" 
+add target to attack.parameters at 1
+create weapon type Parameter
+set weapon.name to "weapon" 
+add weapon to attack.parameters at 2
+create troll type Class
+set troll.name to "Troll" 
+create giant type class
+set giant.name to "Giant"
+create cast type Operation
+set cast.name to "smash"
+add cast to giant.operations at 0
+create knight type Class
+set knight.name to "Knight"
+create smash type Operation
+set smash.name to "smash"
+add smash to knight.operations at 0
+create mage type Class
+set mage.name to "Mage" 
+\end{lstlisting}
+
+She then assigned this work to Bob and Alice. Both of them checked out this project to their own machine. Alice then started to continue the model. She then moved parameter \textsf{target} to the first place in operation \textsf{attack}'s parameters, because she thought it was more intuitive for programmers to think about the \textsf{target} first than the rest parameters (List. \ref{lst:cbp_right}, line 29). She also moved operations \textsf{smash} from class \textsf{Knight} to class \textsf{Giant} and \textsf{cast} from class \textsf{Giant} to class \textsf{Mage} as thy are more reasonable to belong to their new classes (lines 30-33). Alice also created a generalisation relationship with id \textsf{rightGen} from class \textsf{Troll} to class \textsf{Character} (34-36). Bob also did the same thing except that his generalisation came with id \textsf{leftGen} (List. \ref{lst:cbp_left}, line 29-31). 
+
+Later on, Jane then informed them that she wanted all good characters should be derived from a general, hero-like class, and the enemy should be the Orcs not Trolls. She also instructed that Bob should focus on developing class \textsf{Knight} and Alice on class \textsf{Mage}. In consequence, Alice then changed the name of class \textsf{Character} from ``Character'' to ``Hero'' (the id of class \textsf{Hero} is still \textsf{character}) (line 37). Again, Bob did the same thing. He also changed the name of class \textsf{Character} from ``Character'' to ``Hero'' (line 32). Instead of creating a new generalisation relationship, both of them preferred to move the generalisation relationships that they had created to their assigned classes. Alice moved generalisation \textsf{rightGen} from class \textsf{Troll} to class \textsf{Mage} (lines 38-39), and Bob move generalisation \textsf{leftGen} from class \textsf{Troll} to class \textsf{Knight} (lines 33-34). Bob also moved parameter \textsf{target} in operation \textsf{attack} to the last index as he thought setting target as the last parameter was intuitive (line 35), and deleted the class {Giant}, and unfortunately, he deleted class \text{Giant} accidentally (lines 36-40). The class diagrams of Bob and Alice's models are visualised in Figures \ref{fig:class_diagram_left} and \ref{fig:class_diagram_right} respectively. Lastly, Alice changed the \textsf{name} of class \textsf{Troll} to ``Orc'' (line 40) while Bob changed it to ``Ogre'' (line 41).  
+
+\begin{lstlisting}[firstnumber=29,style=eol,caption={The appended events made by Alice to produce the right model in Fig. \ref{fig:class_diagram_right} (right version).},label=lst:cbp_right]
+move target in attack.parameters from 1 to 0
+remove smash from knight.operations at 0 composite l1
+add smash to giant.operations at 0 composite l1
+remove cast from giant.operations at 1 composite l2
+add cast to mage.operations at 0 composite l2
+create rightGen type Generalization
+set rightGen.general to character
+set troll.generalization to rightGen
+set character.name from "Character" to "Hero"
+remove rightGen from troll.generalization composite l3
+set mage.generalization to rightGen composite l3
+set troll.name from "Troll" to "Orc"
+\end{lstlisting}
+
+\begin{lstlisting}[firstnumber=29,style=eol,caption={The appended events made by Bob to produce the left model in Fig. \ref{fig:class_diagram_left} (left version).},label=lst:cbp_left]
+create leftGen type Generalization
+set leftGen.general to character
+set troll.generalization to leftGen
+set character.name from "Character" to "Hero"
+remove leftGen from troll.generalization composite r1
+set knight.generalization to leftGen composite r1
+move target in attack.parameters from 1 to 2
+unset cast.name from "cast" to null composite r2
+remove cast from giant.operations at 0 composite r2
+delete cast composite r2
+unset giant.name from "Giant" to null composite r2
+delete giant comp r2
+set troll.name from "Troll" to "Ogre"
+\end{lstlisting}
+
+Using the information contained in CBPs in Listings in CBPs in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we can construct an element tree as depicted in Fig. \ref{fig:element_tree_game} using the element tree construction method presented in Section \ref{sec:tree_construction}.
+
+\begin{figure*}
+    \centering
+    \includegraphics[width=\linewidth]{element_tree_game}
+    \caption{An element tree constructed using information contained in CBPs in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}.}
+    \label{fig:element_tree_game}
+\end{figure*} 
+
 \section{State-based Conflict Detection: EMF Compare}
 \label{sec:state_based_conflict_detection_emf_compare}
-In EMF Compare \cite{emfcompare2018developer}, a conflict only occurs in three-way comparison. The comparison involves one original version and two different modified versions of a same model. A conflict occurs when an element is identified changed in both newer versions. EMF Compare classifies the conflict as \textsf{REAL} if both changes produce two new inequivalent states or \textsf{PSEUDO} if the new states are equivalent.
+In EMF Compare \cite{emfcompare2018developer}, as a representation of state-based model comparison, a conflict only occurs in three-way comparison. The comparison involves two different versions of a model and one original -- common ancestor -- version of it. A conflict occurs when an element is identified changed in both versions in reference to its original version. For example, Alice changed the \textsf{name} of class \textsf{Troll} to ``Orc''while Bob renamed it to ``Ogre'' (Figure \ref{fig:class_diagram_rpg}). A conflict also occurs when a change in one version is applied first makes another change from another version inapplicable due to dependency violation. For instance, Alice moved operation \textsf{smash} from class \textsf{Knight} to class \textsf{Giant} but this class was deleted by Bob. Deleting class \textsf{Giant} makes the move inapplicable.
 
 Let's say that we have three versions of a model: $m_{o}$ is the original version, $m_{l}$ is the left version, and $m_{r}$ is the right version, where $m_{o}$, $m_{l}$, $m_{r}$ $\in$ $M$. 
-Every model consists of elements. Thus, $E_{O}$, $E_{L}$ , and $E_{R}$ are sets of elements of models $M_{O}$, $M_{L}$, and $E_{R}$ respectively, where $E_{O}=\{e_{o1}, e_{o2}, ..., e_{oa}\}$, $E_{O}=\{e_{l1}, e_{l2}, ..., e_{lb}\}$, and $E_{R}=\{e_{r1}, e_{r2}, ..., e_{rc}\}$. 
-We also have two sets of operations, $O_{L}$ and $O_{R}$, that changes model $m_{O}$ to models $M_{L}$ and $M_{R}$; $O_{L}=\{o_{l1}, o_{l2}, ..., o_{ld}\}$ and $O_{R}=\{o_{r1}, o_{r2}, ..., o_{rf}\}$. 
+Every model consists of elements. Thus, $E_{O}$, $E_{L}$ , and $E_{R}$ are sets of elements of models $M_{O}$, $M_{L}$, and $E_{R}$ respectively, where $E_{O}=\{e_{o1}, e_{o2}, ..., e_{oa}\}$, $E_{L}=\{e_{l1}, e_{l2}, ..., e_{lb}\}$, and $E_{R}=\{e_{r1}, e_{r2}, ..., e_{rc}\}$. 
+We also have two sets of operations $O_{L}$ and $O_{R}$ that changes model $m_{O}$ to models $M_{L}$ and $M_{R}$ respectively, where $O_{L}=\{o_{l1}, o_{l2}, ..., o_{ld}\}$ and $O_{R}=\{o_{r1}, o_{r2}, ..., o_{rf}\}$. 
 
-If we apply an operation $o_{l}$ to an element $e_{o}$ then it changes the element to a new state $e_{l}$, where $+$ is the operator of applying an operation.
+If we apply an operation $o_{l}$ to an element $e_{o}$, it changes the element to a new state $e_{l}$, where $+$ is the operator of applying an operation.
 \begin{equation} \label{eq:conflict_1.1}
 e_{o} + o_{l}  \rightarrow e_{l}
 \end{equation}
-Thus we can infer that if we apply different operation $o_{r}$ to element $e_{o}$ then it produces element $e_{r}$. 
+Moreover, if we apply a different operation $o_{r}$ to element $e_{o}$ then it produces a new state $e_{r}$. 
 \begin{equation} \label{eq:conflict_1.2}
 e_{o} + o_{r}  \rightarrow e_{r}
 \end{equation}
@@ -602,7 +701,8 @@ In EMF Compare, operations $o_{l}$ and $o_{r}$ are in conflict if they modify a 
 \begin{equation} \label{eq:conflict_1.3}
 iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \Rightarrow o_{l}\;!\;o_{r}
 \end{equation} 
-The conflict is \textsf{REAL} if $e_{l}$ and $e_{r}$ are not equivalent.
+EMF Compare classifies a conflict as \textsf{REAL} if both changes produce two new inequivalent states or \textsf{PSEUDO} if the new states are equivalent.
+The conflict is \textsf{REAL} if $e_{l}$ and $e_{r}$ are not equivalent. 
 \begin{equation} \label{eq:conflict_1.4}
 iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \wedge e_{l} \not\equiv e_{r} \Rightarrow o_{l}\;!_{re}\;o_{r}
 \end{equation}
@@ -610,29 +710,36 @@ The conflict is \textsf{PSEUDO} if $e_{l}$ and $e_{r}$ are equivalent.
 \begin{equation} \label{eq:conflict_1.5}
 iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \wedge e_{l} \equiv e_{r} \Rightarrow o_{l}\;!_{ps}\;o_{r}
 \end{equation} 
+If applying operation $o_{l}$ makes applying $o_{r}$ inapplicable then $o_{l}$ and $o_{r}$ are in conflict.
+\begin{equation} \label{eq:conflict_1.6}
+(e_{o} + o_{r} \not\equiv e_{o}) \wedge (e_{o} + o_{l} + o_{r} \equiv e_{o} + o_{l}) \Rightarrow o_{l}\;!\;o_{r}
+\end{equation} 
 
-In EMF Compare, $O_{L}$ and $O_{L}$ are derived from differencing process in Section \ref{sec:model_differencing}. There are two differencing processes: differencing $M_{L}$ to $M_{O}$ and $M_{R}$ to $M_{O}$. These two differencing processes produce two sets of differences $D_{OL}$ and $D_{OR}$ that contains a number of differences as defined in \ref{eq:diff_definition}, where $D_{OL} = \{dol1, dol2, ..., dolg\}$ and $D_{OR} = \{dor1, dor2, ..., dorh\}$. In EMF Compare, these differences are changes that if are applied to a target model, they transform it to become equivalent to a reference model. For example, $D_{OL}$ will transforms $M_{O}$ to $M_{L}$. Thus, we can say that these differences can be treated as or equivalent to operations;  $D_{OL} \equiv O_{L}$ and $D_{OR} \equiv O_{R}$.
+In three-way comparison, we have two differencing processes that produces two sets of differences $D_{OL}$ and $D_{OR}$, where $D_{OL}$ = $\{d_{ol1}$, $d_{ol2}$, ..., $d_{olg}\}$, $D_{OR}$ = $\{d_{or1}$, $d_{or2}$, ..., $d_{orh}\}$, and each difference $d$ is expressed as in (\ref{eq:diff_definition}). Both sets are obtained from differencing $M_{L}$ to $M_{O}$ and $M_{R}$ to $M_{O}$ respectively using the approach explained in Section \ref{sec:model_differencing}. These differences can be treated as operations that if we apply these operations to a target model, they transform it to become equivalent to a reference model. For example, applying a set of differences $D_{OL}$ to a model $M_{O}$ will transform it to model $M_{L}$. Therefore, we can say that these differences are equivalent to operations. Thus, we can have two sets of operations, $O_{L}$ and $O_{R}$, which $O_{L} \equiv D_{OL}$ and $O_{R} \equiv D_{OR}$. The differences are treated as operations because state-based comparison does not use real records of operations. Instead, it utilise an LCS algorithm to derives differences and treats them as operations. It then uses these operations to detect conflicts using (\ref{eq:conflict_1.3}), (\ref{eq:conflict_1.4}), and (\ref{eq:conflict_1.5}).  
 
-Since state-based comparison, in this care EMF Compare, does not use real historical records of operations applied to a model, it derives these operations/differences using an LCS algorithm.  It then uses the derived operations/differences to detect conflicts between them using (\ref{eq:conflict_1.3}), (\ref{eq:conflict_1.4}), and (\ref{eq:conflict_1.5}).  
+Conflict detection in state-based comparison might not accurate because differences/operations derived using an LCS algorithm might not reflect historical changes of a model.
+For example, EMF Compare does not detect that there is a conflict in operation \textsf{attack}'s parameters between Bob's and Alice's versions.  Using an LCS algorithm, the derived operations related to the feature \textsf{parameters} of element \textsf{attack} which, if presented as change events, are expressed as [\texttt{\small \textbf{move} target \textbf{in} attack.parameters \textbf{from} 1 \textbf{to} 2}] for Bob's version and [\texttt{\small \textbf{move} gem \textbf{in} attack.parameters \textbf{from} 1 \textbf{to} 2}] for Alice's version. Using (\ref{eq:conflict_1.3}), both operations are not in conflict since both operations modify two different elements, target and gem. 
 
-Drawbacks of EMF Compare Conflict Detection and Resolution:
+This result is different if we employ change-based approach to detect conflicts using the change event records in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}. At line 29 in List. \ref{lst:cbp_right} and line 35 in List. \ref{lst:cbp_left}, we can identity that Bob and Alice modified the same element \textsf{target}, which according to (\ref{eq:conflict_1.3}), the operations represented by the events are in conflict since both modify the same element.
 
-\begin{enumerate}
-    \item Operations/differences are determined using an LCS algorithm which might not reflect the real historical changes.
-    \item Two operations that modify a same element are perceived in conflict even though the end states after applying each operation are the same. 
-    \item When two operations on an element are in conflict. If one of the operation is selected as the applied operation, the other operation is only cancelled but the state of the element is not reversed back to its original state. This can cause an element does not exist after conflict resolution and merging.
-\end{enumerate}
 
-Drawbacks of EMF Store Conflict Detection and Resolution:
-\begin{enumerate} 
-    \item Two operations that modify a same element are perceived in conflict even though the end states after applying each operation are the same. This can lead to premature model after conflict resolution and merging since one of the two operation have to be reversed back even though there is no conflict.
-\end{enumerate}
 
-\begin{enumerate}
-    \item When two operations on an element are in conflict. If one of the operation is selected as the applied operation, the other operation is only cancelled but the state of the element is not reversed back to its original state. This can cause an element does not exist after conflict resolution and merging.
-    \item Operations/differences are determined using an LCS algorithm which might not reflect the real historical changes.
-    \item Two operations that modify an element are perceived in conflict even though the end states after applying each operation are the same. 
-\end{enumerate}
+%\begin{enumerate}
+%    \item Operations/differences are determined using an LCS algorithm which might not reflect the real historical changes.
+%    \item Two operations that modify a same element are perceived in conflict even though the end states after applying each operation are the same. 
+%    \item When two operations on an element are in conflict. If one of the operation is selected as the applied operation, the other operation is only cancelled but the state of the element is not reversed back to its original state. This can cause an element does not exist after conflict resolution and merging.
+%\end{enumerate}
+
+%Drawbacks of EMF Store Conflict Detection and Resolution:
+%\begin{enumerate} 
+%    \item Two operations that modify a same element are perceived in conflict even though the end states after applying each operation are the same. This can lead to premature model after conflict resolution and merging since one of the two operation have to be reversed back even though there is no conflict.
+%\end{enumerate}
+%
+%\begin{enumerate}
+%    \item When two operations on an element are in conflict. If one of the operation is selected as the applied operation, the other operation is only cancelled but the state of the element is not reversed back to its original state. This can cause an element does not exist after conflict resolution and merging.
+%    \item Operations/differences are determined using an LCS algorithm which might not reflect the real historical changes.
+%    \item Two operations that modify an element are perceived in conflict even though the end states after applying each operation are the same. 
+%\end{enumerate}
 
 \section{Change-based Conflict Detection: EMF Store}
 \label{sec:change_based_conflict_detection_emf_store}
@@ -872,52 +979,52 @@ Ordered: add, remove, move
 \subsection{Duplicate Conflict}
 NonUnique: add add
 
-
-\subsection{Subsection title}
-\label{sec:2}
-as required. Don't forget to give each section
-and subsection a unique label (see Sect.~\ref{sec:1}).
 %
-% For one-column wide figures use
-\begin{figure}
-% Use the relevant command for your figure-insertion program
-% to insert the figure file.
-% For example, with the option graphics use
-\resizebox{0.75\textwidth}{!}{%
-  \includegraphics{example.eps}
-}
-% If not, use
-%\vspace{5cm}       % Give the correct figure height in cm
-\caption{Please write your figure caption here}
-\label{fig:1}       % Give a unique label
-\end{figure}
-%
-% For two-column wide figures use
-\begin{figure*}
-% Use the relevant command for your figure-insertion program
-% to insert the figure file. See example above.
-% If not, use
-\vspace*{5cm}       % Give the correct figure height in cm
-\caption{Please write your figure caption here}
-\label{fig:2}       % Give a unique label
-\end{figure*}
-%
-% For tables use
-\begin{table}
-\caption{Please write your table caption here}
-\label{tab:1}       % Give a unique label
-% For LaTeX tables use
-\begin{tabular}{lll}
-\hline\noalign{\smallskip}
-first & second & third  \\
-\noalign{\smallskip}\hline\noalign{\smallskip}
-number & number & number \\
-number & number & number \\
-\noalign{\smallskip}\hline
-\end{tabular}
-% Or use
-\vspace*{5cm}  % with the correct table height
-\end{table}
+%\subsection{Subsection title}
+%\label{sec:2}
+%as required. Don't forget to give each section
+%and subsection a unique label (see Sect.~\ref{sec:1}).
+%%
+%% For one-column wide figures use
+%\begin{figure}
+%% Use the relevant command for your figure-insertion program
+%% to insert the figure file.
+%% For example, with the option graphics use
+%\resizebox{0.75\textwidth}{!}{%
+%  \includegraphics{example.eps}
+%}
+%% If not, use
+%%\vspace{5cm}       % Give the correct figure height in cm
+%\caption{Please write your figure caption here}
+%\label{fig:1}       % Give a unique label
+%\end{figure}
+%%
+%% For two-column wide figures use
+%\begin{figure*}
+%% Use the relevant command for your figure-insertion program
+%% to insert the figure file. See example above.
+%% If not, use
+%\vspace*{5cm}       % Give the correct figure height in cm
+%\caption{Please write your figure caption here}
+%\label{fig:2}       % Give a unique label
+%\end{figure*}
+%%
+%% For tables use
+%\begin{table}
+%\caption{Please write your table caption here}
+%\label{tab:1}       % Give a unique label
+%% For LaTeX tables use
+%\begin{tabular}{lll}
+%\hline\noalign{\smallskip}
+%first & second & third  \\
+%\noalign{\smallskip}\hline\noalign{\smallskip}
+%number & number & number \\
+%number & number & number \\
+%\noalign{\smallskip}\hline
+%\end{tabular}
+%% Or use
+%\vspace*{5cm}  % with the correct table height
+%\end{table}
 %%
 %% BibTeX users please use
 %% \bibliographystyle{}
@@ -937,7 +1044,7 @@ number & number & number \\
 %% etc
 %\end{thebibliography}
 
-\bibliographystyle{alphaurl}
+\bibliographystyle{IEEETran}
 \bibliography{references}
 
 \end{document}
