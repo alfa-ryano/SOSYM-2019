@@ -40,6 +40,7 @@
 % Remove any % below to load the required packages
 %\usepackage{latexsym}
 
+\usepackage[table,xcdraw]{xcolor}
 \usepackage{amsmath}
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
@@ -606,6 +607,7 @@ Similar to the state-based approach in Section \ref{sec:model_differencing}, we 
 \label{sec:another_running_example}
 In this section, we introduce another running example to explain how to detect conflicts using the element tree. We use this example to construct a new element tree and to explain how conflict detection is performed in EMF Compare, EMF Store, and our change-based conflict detection. Let's say that there is a project to develop a Role Playing Game (RPG). Jane, as the technical leader, set up the initial model. The records of events during setting up the initial is recorded in the CBP in List. \ref{fig:class_diagram_origin}. From the List., we know that she created a class \textsf{Character} that contains an operation \textsf{attack} with three parameters: \textsf{gem}, \textsf{target}, and \textsf{weapon} (lines 1-14). She also created four other classes; \textsf{Troll} (lines 15-16), \textsf{Giant} (lines 17-21), \textsf{Knight} (lines 22-26), and \textsf{Mage} (lines 27-28). She then pushed her work to a change-based version control system. If her work is visualised in state-based format, the model looks like in Fig. \ref{fig:class_diagram_origin}.
 
+\vspace{-15pt}
 \begin{lstlisting}[firstnumber=1,style=eol,caption={The recorded events to produce the original model in Fig. \ref{fig:class_diagram_origin} (original version).},label=lst:cbp_origin]
 create character type Class
 set character.name to "Character" 
@@ -641,6 +643,7 @@ She then assigned this work to Bob and Alice. Both of them checked out this proj
 
 Later on, Jane then informed them that she wanted all good characters should be derived from a general, hero-like class, and the enemy should be the Orcs not Trolls. She also instructed that Bob should focus on developing class \textsf{Knight} and Alice on class \textsf{Mage}. In consequence, Alice then changed the name of class \textsf{Character} from ``Character'' to ``Hero'' (the id of class \textsf{Hero} is still \textsf{character}) (line 37). Again, Bob did the same thing. He also changed the name of class \textsf{Character} from ``Character'' to ``Hero'' (line 32). Instead of creating a new generalisation relationship, both of them preferred to move the generalisation relationships that they had created to their assigned classes. Alice moved generalisation \textsf{rightGen} from class \textsf{Troll} to class \textsf{Mage} (lines 38-39), and Bob move generalisation \textsf{leftGen} from class \textsf{Troll} to class \textsf{Knight} (lines 33-34). Bob also moved parameter \textsf{target} in operation \textsf{attack} to the last index as he thought setting target as the last parameter was intuitive (line 35), and deleted the class {Giant}, and unfortunately, he deleted class \text{Giant} accidentally (lines 36-40). The class diagrams of Bob and Alice's models are visualised in Figures \ref{fig:class_diagram_left} and \ref{fig:class_diagram_right} respectively. Lastly, Alice changed the \textsf{name} of class \textsf{Troll} to ``Orc'' (line 40) while Bob changed it to ``Ogre'' (line 41).  
 
+\vspace{-15pt}
 \begin{lstlisting}[firstnumber=29,style=eol,caption={The appended events made by Alice to produce the right model in Fig. \ref{fig:class_diagram_right} (right version).},label=lst:cbp_right]
 move target in attack.parameters from 1 to 0
 remove smash from knight.operations at 0 composite l1
@@ -656,6 +659,7 @@ set mage.generalization to rightGen composite l3
 set troll.name from "Troll" to "Orc"
 \end{lstlisting}
 
+\vspace{-15pt}
 \begin{lstlisting}[firstnumber=29,style=eol,caption={The appended events made by Bob to produce the left model in Fig. \ref{fig:class_diagram_left} (left version).},label=lst:cbp_left]
 create leftGen type Generalization
 set leftGen.general to character
@@ -672,7 +676,7 @@ delete giant comp r2
 set troll.name from "Troll" to "Ogre"
 \end{lstlisting}
 
-Using the information contained in CBPs in Listings in CBPs in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we can construct an element tree as depicted in Fig. \ref{fig:element_tree_game} using the element tree construction method presented in Section \ref{sec:tree_construction}.
+In Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we also introduce composite events -- lines with keyword \textsf{composite} -- that represent composite operations. Composite operations are operations that should be treated as one composition -- identified with the same composite id. For example, moving an element from a container to another container is composite event since it consists of two operations: removing/unsetting the element from its source container and adding/setting it to its target container (lines 36-37 Listing \ref{lst:cbp_right}). Using the information contained in CBPs in Listings in CBPs in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we can construct an element tree as depicted in Fig. \ref{fig:element_tree_game} using the element tree construction method presented in Section \ref{sec:tree_construction}.
 
 \begin{figure*}
     \centering
@@ -681,48 +685,78 @@ Using the information contained in CBPs in Listings in CBPs in Listings \ref{lst
     \label{fig:element_tree_game}
 \end{figure*} 
 
-\section{State-based Conflict Detection: EMF Compare}
-\label{sec:state_based_conflict_detection_emf_compare}
-In EMF Compare \cite{emfcompare2018developer}, as a representation of state-based model comparison, a conflict only occurs in three-way comparison. The comparison involves two different versions of a model and one original -- common ancestor -- version of it. A conflict occurs when an element is identified changed in both versions in reference to its original version. For example, Alice changed the \textsf{name} of class \textsf{Troll} to ``Orc''while Bob renamed it to ``Ogre'' (Figure \ref{fig:class_diagram_rpg}). A conflict also occurs when a change in one version is applied first makes another change from another version inapplicable due to dependency violation. For instance, Alice moved operation \textsf{smash} from class \textsf{Knight} to class \textsf{Giant} but this class was deleted by Bob. Deleting class \textsf{Giant} makes the move inapplicable.
+\section{Conflict Detection}
+\label{sec:conflict_detection}
+In state-based model comparison, a conflict detection usually requires two different versions of a model and one shared ancestor -- the original version. In change-based model comparison, the original version is not required since it is implicitly contained in the other two versions' change-based persistence. A conflict occurs when an element is identified changed in both versions in reference to its original version. A conflict also occurs when a change from a version is applied first causes another change from the other version cannot be applied due to dependency violation. 
 
 Let's say that we have three versions of a model: $m_{o}$ is the original version, $m_{l}$ is the left version, and $m_{r}$ is the right version, where $m_{o}$, $m_{l}$, $m_{r}$ $\in$ $M$. 
-Every model consists of elements. Thus, $E_{O}$, $E_{L}$ , and $E_{R}$ are sets of elements of models $M_{O}$, $M_{L}$, and $E_{R}$ respectively, where $E_{O}=\{e_{o1}, e_{o2}, ..., e_{oa}\}$, $E_{L}=\{e_{l1}, e_{l2}, ..., e_{lb}\}$, and $E_{R}=\{e_{r1}, e_{r2}, ..., e_{rc}\}$. 
-We also have two sets of operations $O_{L}$ and $O_{R}$ that changes model $m_{O}$ to models $M_{L}$ and $M_{R}$ respectively, where $O_{L}=\{o_{l1}, o_{l2}, ..., o_{ld}\}$ and $O_{R}=\{o_{r1}, o_{r2}, ..., o_{rf}\}$. 
+Every model consists of elements. Thus, $E_{O}$, $E_{L}$ , and $E_{R}$ are sets of elements of models $M_{O}$, $M_{L}$, and $E_{R}$ respectively, where $E_{O}=\{e_{o1}, e_{o2}, ..., e_{oa}\}$, $E_{L}=\{e_{l1}, e_{l2}, ..., e_{lb}\}$, and $E_{R}=\{e_{r1}, e_{r2}, ..., e_{rc}\}$. We also have two sets of operations $O_{L}$ and $O_{R}$ that changes model $m_{m}$ to models $m_{l}$ and $m_{r}$ respectively, where $O_{L}=\{o_{l1}, o_{l2}, ..., o_{ld}\}$ and $O_{R}=\{o_{r1}, o_{r2}, ..., o_{rf}\}$. 
 
-If we apply an operation $o_{l}$ to an element $e_{o}$, it changes the element to a new state $e_{l}$, where $+$ is the operator of applying an operation.
-\begin{equation} \label{eq:conflict_1.1}
-e_{o} + o_{l}  \rightarrow e_{l}
-\end{equation}
-Moreover, if we apply a different operation $o_{r}$ to element $e_{o}$ then it produces a new state $e_{r}$. 
-\begin{equation} \label{eq:conflict_1.2}
-e_{o} + o_{r}  \rightarrow e_{r}
-\end{equation}
-In EMF Compare, operations $o_{l}$ and $o_{r}$ are in conflict if they modify a same element, in this case $e_{o}$, where $!$ is the operator that states two operations are in conflict. Function $iat(O, E)$ (is applied to) returns a boolean value whether an operation has been applied to an element.
-\begin{equation} \label{eq:conflict_1.3}
-iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \Rightarrow o_{l}\;!\;o_{r}
+\subsection{State-based Conflict Detection: EMF Compare}
+\label{sec:state_based_conflict_detection_emf_compare}
+In state-based model comparison, the two sets of operations $O_{L}$ and $O_{R}$ are not readily available. They have to be derived trough model differencing. Both sets can be obtained by differencing $M_{L}$ to $M_{O}$ and $M_{R}$ to $M_{O}$ using an LCS algorithm as explained in Section \ref{sec:model_differencing}. These two differencing processes produce two sets of differences, $D_{OL}$ and $D_{OR}$, where $D_{OL}$ = $\{d_{ol1}$, $d_{ol2}$, ..., $d_{olg}\}$, $D_{OR}$ = $\{d_{or1}$, $d_{or2}$, ..., $d_{orh}\}$, and each difference $d$ is expressed as in (\ref{eq:diff_definition}). These differences can be treated as operations since if we apply these differences as operations to a target model, they transform it to become equivalent to a reference model. For example, applying a set of differences $D_{OL}$ to a model $M_{O}$ will transform it to model $M_{L}$. Therefore, we can say that these differences are equivalent to operations. Thus, we can have two sets of operations, $O_{L}$ and $O_{R}$, which $O_{L} \equiv D_{OL}$ and $O_{R} \equiv D_{OR}$. These operations can then be used to detect conflicts using (\ref{eq:conflict_1.8}), (\ref{eq:conflict_1.9}), and (\ref{eq:conflict_1.10}).  
+
+If we use EMF Compare to derive $O_{L}$ from Bob's and Jane's versions in Fig. \ref{fig:class_diagram_rpg} and present it in the format of change events, we obtain the following list. 
+\begin{lstlisting}[firstnumber=1,style=eol,caption={The derived change events (operations) made by Bob to produce the right model in Fig. \ref{fig:class_diagram_left} (right version).},label=lst:cbp_left_state]
+move target in attack.parameters from 1 to 2
+set character.name from "Character" to "Hero"
+set troll.name from "Troll" to "Ogre"
+create leftGen type Generalization
+set leftGen.general to character
+set knight.generalization to leftGen
+delete cast
+delete giant
+\end{lstlisting}
+
+And following list is the derived change events for $O_{R}$ that are obtained from Bob's and Jane's versions in Fig. \ref{fig:class_diagram_rpg}. 
+\begin{lstlisting}[firstnumber=1,style=eol,caption={The derived change events (operations) made by Alice to produce the right model in Fig. \ref{fig:class_diagram_right} (right version).},label=lst:cbp_right_state]
+move gem in attack.parameters from 0 to 1
+set character.name from "Character" to "Hero"
+set troll.name from "Troll" to "Orc"
+remove smash from knight.operations at 0
+add smash to giant.operations at 0
+create rightGen type Generalization
+set rightGen.general to character
+set mage.generalization to rightGen
+remove cast from giant.operations at 1
+add cast to mage.operations at 0
+\end{lstlisting}
+
+\textbf{Duality}. In EMF Compare, a conflict occurs between two different operations, $o_{l}$ and $o_{r}$, if each is applied to a same element produce two different eventual states, where $!$ is the operator for expressing that two operations are in conflict. This conflict is classified \textsf{REAL} by EMF Compare.
+\begin{equation} \label{eq:conflict_1.8}
+e_{o} + o_{l} \not\equiv e_{o} + o_{r} \Rightarrow o_{l}\;!\;o_{r}
 \end{equation} 
-EMF Compare classifies a conflict as \textsf{REAL} if both changes produce two new inequivalent states or \textsf{PSEUDO} if the new states are equivalent.
-The conflict is \textsf{REAL} if $e_{l}$ and $e_{r}$ are not equivalent. 
-\begin{equation} \label{eq:conflict_1.4}
-iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \wedge e_{l} \not\equiv e_{r} \Rightarrow o_{l}\;!_{re}\;o_{r}
-\end{equation}
-The conflict is \textsf{PSEUDO} if $e_{l}$ and $e_{r}$ are equivalent.
-\begin{equation} \label{eq:conflict_1.5}
-iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \wedge e_{l} \equiv e_{r} \Rightarrow o_{l}\;!_{ps}\;o_{r}
+\textbf{Pseudo Duality}. A conflict is classified as \textsf{PSEUDO} if the eventual states produced are equivalent. 
+\begin{equation} \label{eq:conflict_1.9}
+e_{o} + o_{l} \equiv e_{o} + o_{r} \Rightarrow o_{l}\;!_{p}\;o_{r}
 \end{equation} 
-If applying operation $o_{l}$ makes applying $o_{r}$ inapplicable then $o_{l}$ and $o_{r}$ are in conflict.
-\begin{equation} \label{eq:conflict_1.6}
+\textbf{Non-applicability}. A conflict also occurs when applying operation $o_{l}$ to element $e_{o}$ makes $o_{r}$ inapplicable to element $e_{o}$. Therefore, operations $o_{l}$ and $o_{r}$ are in conflict. 
+%For instance, Alice moved operation \textsf{smash} from class \textsf{Knight} to class \textsf{Giant} but this class was deleted by Bob. Deleting class \textsf{Giant} makes the move inapplicable. This conflict is classified \textsf{REAL} by EMF Compare.
+\begin{equation} \label{eq:conflict_1.10}
 (e_{o} + o_{r} \not\equiv e_{o}) \wedge (e_{o} + o_{l} + o_{r} \equiv e_{o} + o_{l}) \Rightarrow o_{l}\;!\;o_{r}
-\end{equation} 
+\end{equation}
 
-In three-way comparison, we have two differencing processes that produces two sets of differences $D_{OL}$ and $D_{OR}$, where $D_{OL}$ = $\{d_{ol1}$, $d_{ol2}$, ..., $d_{olg}\}$, $D_{OR}$ = $\{d_{or1}$, $d_{or2}$, ..., $d_{orh}\}$, and each difference $d$ is expressed as in (\ref{eq:diff_definition}). Both sets are obtained from differencing $M_{L}$ to $M_{O}$ and $M_{R}$ to $M_{O}$ respectively using the approach explained in Section \ref{sec:model_differencing}. These differences can be treated as operations that if we apply these operations to a target model, they transform it to become equivalent to a reference model. For example, applying a set of differences $D_{OL}$ to a model $M_{O}$ will transform it to model $M_{L}$. Therefore, we can say that these differences are equivalent to operations. Thus, we can have two sets of operations, $O_{L}$ and $O_{R}$, which $O_{L} \equiv D_{OL}$ and $O_{R} \equiv D_{OR}$. The differences are treated as operations because state-based comparison does not use real records of operations. Instead, it utilise an LCS algorithm to derives differences and treats them as operations. It then uses these operations to detect conflicts using (\ref{eq:conflict_1.3}), (\ref{eq:conflict_1.4}), and (\ref{eq:conflict_1.5}).  
+\begin{table*}[]
+    \centering
+    \caption{Conflicting change events identified using EMF Compare based on the case in Fig. \ref{fig:class_diagram_rpg}.}
+    \label{table:conflicts_emfc}
+    % Please add the following required packages to your document preamble:
+    % \usepackage[table,xcdraw]{xcolor}
+    % If you use beamer only pass "xcolor=table" option, i.e. \documentclass[xcolor=table]{beamer}
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \multicolumn{1}{|c|}{{\color[HTML]{000000} \textbf{ID}}} & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Left Change Events (Bob)}}} & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Right Change Events (Alice)}}}                                      & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Type}}}           \\ \hline
+        EC1                                                      & set character.name from "Character" to "Hero"                                 & set character.name from "Character" to "Hero"                                                                         & \begin{tabular}[c]{@{}l@{}}pseudo\\dual-state\end{tabular} \\ \hline
+        EC2                                                      & set troll.name from "Troll" to "Ogre"                                         & set troll.name from "Troll" to "Orc"                                                                                  & \begin{tabular}[c]{@{}l@{}}dual-state\end{tabular}        \\ \hline
+        EC3                                                      & delete cast                                                                   & \begin{tabular}[c]{@{}l@{}}remove smash from knight.operations at 0\\ add smash to giant.operations at 0\end{tabular} & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}        \\ \hline
+        EC4                                                      & delete giant                                                                  & \begin{tabular}[c]{@{}l@{}}remove cast from giant.operations at 1\\ add cast to mage.operations at 0\end{tabular}     & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}        \\ \hline
+    \end{tabular}
+\end{table*}
 
-Conflict detection in state-based comparison might not accurate because differences/operations derived using an LCS algorithm might not reflect historical changes of a model.
-For example, EMF Compare does not detect that there is a conflict in operation \textsf{attack}'s parameters between Bob's and Alice's versions.  Using an LCS algorithm, the derived operations related to the feature \textsf{parameters} of element \textsf{attack} which, if presented as change events, are expressed as [\texttt{\small \textbf{move} target \textbf{in} attack.parameters \textbf{from} 1 \textbf{to} 2}] for Bob's version and [\texttt{\small \textbf{move} gem \textbf{in} attack.parameters \textbf{from} 1 \textbf{to} 2}] for Alice's version. Using (\ref{eq:conflict_1.3}), both operations are not in conflict since both operations modify two different elements, target and gem. 
+Using (\ref{eq:conflict_1.8}), (\ref{eq:conflict_1.9}), and (\ref{eq:conflict_1.10}) and information in Listings \ref{lst:cbp_right_state} and \ref{lst:cbp_left_state}, we can identify four conflicts -- presented in Table \ref{table:conflicts_emfc} along with their conflicting change events. Conflict \textsf{EC1} is a pseudo duality conflict since both modify the same class \textsf{character}'s feature \textsf{name} resulting the same end states, ``Hero'' or ``Hero''. Conflict \textsf{EC2} is a duality conflict. Applying changing \textsf{troll}'s \textsf{name} to ``Ogre'' and \textsf{troll}'s \textsf{name} to ``Orc'' produces two different states -- ``Ogre'' and ``Orc''. Conflicts \textsf{EC3} and \textsf{EC4} are non-applicability conflicts since if we delete operation \textsf{cast} first then it cannot be added to class \textsf{giant}'s operations, and if we delete class \textsf{giant} first then operation \textsf{cast} cannot be added to that class' operations.
 
-This result is different if we employ change-based approach to detect conflicts using the change event records in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}. At line 29 in List. \ref{lst:cbp_right} and line 35 in List. \ref{lst:cbp_left}, we can identity that Bob and Alice modified the same element \textsf{target}, which according to (\ref{eq:conflict_1.3}), the operations represented by the events are in conflict since both modify the same element.
-
-
+Conflict detection in state-based comparison might not be accurate since the derived differences/operations might not reflect the real historical changes of a model.
+For example, EMF Compare does not detect that Alice and Bob modified the same element -- parameter \textsf{target} -- as indicated by line 29 in List. \ref{lst:cbp_right} and line 35 in List. \ref{lst:cbp_left} . Using an LCS algorithm, the derived operations related to the feature \textsf{parameters} of element \textsf{attack}, which if presented as change events, are expressed as [\texttt{\small \textbf{move} target \textbf{in} attack.parameters \textbf{from} 1 \textbf{to} 2}] for Bob's version and [\texttt{\small \textbf{move} gem \textbf{in} attack. parameters \textbf{from} 1 \textbf{to} 2}] for Alice's version. Using (\ref{eq:conflict_1.3}), both operations are not in conflict since both operations modify two different elements, \textsf{target} and \textsf{gem}. The result is different if we employ change-based approach to detect conflicts using the change event records in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}. We explain this in the next section, Section \ref{sec:change_based_conflict_detection_emf_store}.
 
 %\begin{enumerate}
 %    \item Operations/differences are determined using an LCS algorithm which might not reflect the real historical changes.
@@ -741,45 +775,161 @@ This result is different if we employ change-based approach to detect conflicts 
 %    \item Two operations that modify an element are perceived in conflict even though the end states after applying each operation are the same. 
 %\end{enumerate}
 
-\section{Change-based Conflict Detection: EMF Store}
+\subsection{Change-based Conflict Detection: EMF Store}
 \label{sec:change_based_conflict_detection_emf_store}
-In EMF Store, two operations from two different change-based representation are in conflict if applying them in different order to a model produces two inequivalent states \cite{koegel2010emfstore}. Let's say that we have an original model $m_{o}$ and two operations, $o_{l}$ and $o_{r}$. Applying $o_{l}$ first and then $o_{r}$ produces model $m_{lr}$:
-\begin{equation} \label{eq:conflict_2.1}
-m_{o} + o_{l} + o_{r} \rightarrow m_{lr}
-\end{equation}
-If we apply $o_{r}$ first followed by $o_{l}$, we get model $m_{lr}$:
-\begin{equation} \label{eq:conflict_2.2}
-m_{o} + o_{r} + o_{l} \rightarrow m_{rl}
-\end{equation}
-If $m_{lr}$ and $m_{lr}$ are not equivalent, it means that $o_{l}$ and $o_{r}$ are in conflict:
-\begin{equation} \label{eq:conflict_2.3}
-m_{lr} \not\equiv m_{rl} \Rightarrow o_{l}\;!\;o_{r} 
-\end{equation}
-Which if we elaborate, we get:
-\begin{equation} \label{eq:conflict_2.4}
-m_{o} + o_{l} + o_{r} \not\equiv m_{o} + o_{r} + o_{l} \Rightarrow o_{l}\;!\;o_{r}
-\end{equation} 
 
-However in evaluating the artefact of EMF Store, we found out that $o_{l}$ and $o_{r}$ are considered in conflict regardless models $m_{rl}$ and $m_{lr}$ are equivalent or not. For example, two operations $o_{l}$ and $o_{r}$ from two different change-based representation that change the \textsf{name} of element $e_{o}$ from ``A'' to ``B'' are still considered in conflict event though they produces the same end states. In consequence, this leads to the same conflict definition as defined in (\ref{eq:conflict_1.3}) in state-based conflict detection, except that it does not classify the conflict into \textsf{REAL} or \textsf{PSEUDO}. Thus, $o_{l}$ and $o_{r}$ are in conflict if they modify a same element, in this example, element $e_{o}$. 
-
-\begin{equation} \label{eq:conflict_2.5}
-iat(o_{l}, e_{o}) \wedge iat(o_{r}, e_{o}) \Rightarrow o_{l}\;!\;o_{r}
+\textbf{Non-commutability}. In EMF Store \cite{koegel2010emfstore} , operations $o_{l}$ and $o_{r}$ are in conflict if applying them in different order to a same element, in this case element $e_{o}$, produces two different eventual states.
+\begin{equation} \label{eq:conflict_1.3}
+e_{o} + o_{l} + o_{r} \not\equiv e_{o} + o_{l} + o_{r} \Rightarrow o_{l}\;!\;o_{r}
 \end{equation} 
+%For example, Alice changed the \textsf{name} of class \textsf{Troll} to ``Orc''while Bob renamed it to ``Ogre'' (Figure \ref{fig:class_diagram_rpg}). Applying Alice's change first to Bob's change results in the class' \textsf{name} equals to ``Ogre'', or ``Orc'' if the order is reversed. 
+\textbf{Pseudo non-commutability}. However, after examining the implementation \footnote{\url{https://git.eclipse.org/c/emf-store}}, even though the eventual states are equivalent, both operations are still treated  in conflict. 
+\begin{equation} \label{eq:conflict_1.5}
+e_{o} + o_{l} + o_{r} \equiv e_{o} + o_{l} + o_{r} \Rightarrow o_{l}\;!_{p}\;o_{r}
+\end{equation} 
+\textbf{Non-applicability}. This non-applicability rule is the same with the non-applicability rule in the state-based conflict detection. We present the rule again here. 
+\begin{equation} \label{eq:conflict_1.6}
+(e_{o} + o_{r} \not\equiv e_{o}) \wedge (e_{o} + o_{l} + o_{r} \equiv e_{o} + o_{l}) \Rightarrow o_{l}\;!\;o_{r}
+\end{equation}
+\textbf{Composite}. If operation $o_{l}$ is in conflict with operation $o_{r}$ where $o_{r}$ is a member of composite operation $co_{r}$ then operation $o_{l}$ is also in conflict with each operation $o_{n}$ in composite operation $co_{r}$.
+%For example, deleting class \textsf{Giant} (List. \ref{lst:cbp_left} line 40) is not only in conflict with adding operation \textsf{smash} to class \textsf{Giant}'s operations (List. \ref{lst:cbp_right} line 31), but also with the removal of operation \textsf{smash} from class \text{Knight}'s operations (List. \ref{lst:cbp_right} line 31).
+\begin{equation} \label{eq:conflict_1.7}
+o_{l}\;!\;o_{r} \wedge o_{r} \in co_{r} \Rightarrow o_{l}\;!\; \forall o_{n} | o_{n} \in co_{r}
+\end{equation}
+
+\begin{table*}[]
+    \centering
+    \caption{Conflicting change events identified using EMF Store in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}.}
+    \label{table:conflicts_emfs}
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \multicolumn{1}{|c|}{{\color[HTML]{000000} \textbf{ID}}} & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Left Change Events (Bob)}}}                                                                                                                                              & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Right Change Events (Alice)}}}                                                          & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Type}}}                                    \\ \hline
+        \multirow{2}{*}{ES1} & set troll.generalization from null to leftGen                                                                                                                                                                              & \begin{tabular}[c]{@{}l@{}}set troll.generalization from null to rightGen\\ unset troll.generalization from rightGen to null\end{tabular} & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}non-\\ commutability, \\ composite\end{tabular}}                                                                                             \\ \cline{2-3}
+                                            & \begin{tabular}[c]{@{}l@{}}unset troll.generalization from leftGen to null\\ set knight.generalization from null to leftGen\end{tabular}                                                                                   & set mage.generalization from null to rightGen                                                                                             &  \\ \hline
+        ES2                                                      & set character.name from "Character" to"Hero"                                                                                                                                                                               & set character.name from "Character" to "Hero"                                                                                             & \begin{tabular}[c]{@{}l@{}}pseudo non-\\ commutability\end{tabular}                          \\ \hline
+        ES3                                                      & move target in attack.parameters from 1 to 2                                                                                                                                                                               & move target in attack.parameters from 1 to 0                                                                                              & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}                                 \\ \hline
+        \multirow{2}{*}{ES4} & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}unset cast.name from "cast" to null\\ remove cast from giant.operations at 0\\ delete cast type Operation\\ unset giant.name from "Giant" to null\\ delete giant\end{tabular}}                                                                                                                                                                                                                            & \begin{tabular}[c]{@{}l@{}}remove cast from giant.operations at 0\\ add cast to mage.operations at 0 \end{tabular}                         
+        & \multirow{2}{*}{\begin{tabular}[c]{@{}l@{}}non-\\ applicability,\\ composite\end{tabular}} \\ \cline{3-3}
+        &  & \begin{tabular}[c]{@{}l@{}}remove smash from knight.operations at 0\\ add smash to giant.operations at 1\\ \\ \\ \end{tabular}                     &   \\ \hline
+        
+        ES5                                                      & set troll.name from "Troll" to "Ogre"                                                                                                                                                                                      & set troll.name from "Troll" to "Orc"                                                                                                      & \begin{tabular}[c]{@{}l@{}}non-\\ commutability\end{tabular}                                 \\ \hline
+    \end{tabular}
+\end{table*}
+
+In change-based conflict detection, all operations applied to a model are already available in change-based persistence, thus the operations do not need to be derived trough a diffing process. The availability of real historical changes can improve the accuracy of change detection since we can identify precisely elements that have been changed. In consequence, the undetected conflict in state-based conflict detection can be detected. For example, in Listing \ref{lst:cbp_right} line 29, parameter \textsf{target} has been moved from index 1 to 0, while in Listing \ref{lst:cbp_left} line 35, it was moved from index 1 to 2. Since both operations modified the same parameter \textsf{target}, using (\ref{eq:conflict_1.3}) we can identify that both operations are in conflict; parameter \textsf{target} are at different indexes if both operations are applied in different order, and \textsf{parameters}, the containing feature of \textsf{target}, is an ordered feature (Table \ref{table:conflicts_emfs} id ES1).  
+
+The drawback of EMF Store is that it only performs comparison between operations to determine conflicts; it does no take into account the end states of models produced by the operations. In consequence, two operations are in conflict just by modifying a same element regardless of the end states that they produce to the element \cite{DBLP:conf/sfm/BroschKLSWW12}; there is no classification of conflicts to \textsf{REAL} or \textsf{PSEUDO} conflicts. For example, two operations represented by the two change events in Listing \ref{lst:cbp_right} at line 37 and Listing \ref{lst:cbp_right} at line 32, that change the same feature \textsf{name} to the same value ``Hero'', are treated in conflict (Table \ref{table:conflicts_emfs} id ES2). 
+
+The inconsideration of eventual states also causes the assignments of generalizations \textsf{leftGen} and \textsf{rightGen} to class \textsf{troll}'s feature \textsf{generalization}, in Listings \ref{lst:cbp_right} at line 38 and \ref{lst:cbp_left} at line 33, to be in conflict with the \textsf{move} operations on the opposite sides (Table \ref{table:conflicts_emfs} id ES1). Setting feature \textsf{troll}'s \textsf{generalization} to element \textsf{leftGen} is in conflict with the \textsf{move} composite operation that moves \textsf{rightGen} from \textsf{troll}'s \textsf{generalization} to \textsf{mage}'s \textsf{generalization}. Using the non-commutability (\ref{eq:conflict_1.3}) and composite (\ref{eq:conflict_1.7}) rules, we can detect that executing these operations in different order causes \textsf{troll}'s \textsf{generalization} has two different eventual values; \textsf{troll}'s \textsf{generalization} is null if the \textsf{move} operation is executed first or \textsf{leftGen} if the \textsf{set} operation is executed first. We can use the same reasoning to explain the conflict between setting feature \textsf{troll}'s \textsf{generalization} to element \textsf{rightGen} and the \textsf{move} composite operation that moves \textsf{leftGen} from \textsf{troll}'s \textsf{generalization} to \textsf{knight}'s \textsf{generalization}.
+
+In state-based conflict detection, the latter case (ES1) is not a conflict since the values of class \textsf{troll}'s feature \textsf{generalization} in the Jane's, Bob's, and Alice's versions are indentical -- all are null. Thus, there are no \textit{derived} operations that concurrently modify class \textsf{troll}'s feature \textsf{generalization}. Conflict ES4 is a non-applicability, composite conflict. Moving element \textsf{smash} from class \textsf{knight} to class \textsf{giant} and moving element \textsf{cast} from class \textsf{giant} to class \textsf{mage} require the deletion of class \textsf{giant} to be executed later in order to be applicable. Conflict ES5 is a non-commutability conflict. The \text{name} of class \textsf{troll} have an eventual value ``Ogre'' or ``Orc'' depending on the execution order of the conflicting operations.
 
 \section{Change-based Conflict Detection: Epsilon CBP}
 \label{change_based_conflict_detection_epsilon_cbp}
-In our approach, we detect conflicts by comparing the states -- both left and right -- of each element and feature in the element tree. We also check if there is at least an event that has been applied on each side -- left and right -- of that element or feature. Thus, if the states of an element or feature on both sides are not equivalent and there are at least one event has been applied on each side, it means that there is a conflict; both events, on left and right sides, of the element or feature are in conflict. Otherwise, there is no conflict. Thus, we can express this definition of conflict as follow.
+
+In our conflict detection, we take two strategies from both change and state-based conflict detections to improve the accuracy of our approach. We exploit change events to accurately address real historical changes -- not derived ones -- of models. We also take into account the eventual states of models being compared. Thus, two sequences of operations that produce two equivalent eventual states should not be treated in conflict. For the latter strategy, the eventual states is already calculated during the construction of the \textsf{element tree}. Since we also registered change events to every element and feature involved, we can obtain all related change events that produce the eventual state of an element or feature. Let's say that we have the original state of an element $e_{o}$. We also have a set of operations $O_{L}$ = $\{$$o_{l1}$, $o_{l2}$$\}$ that we apply to $e_{o}$ that changes its state to element $e_{l}$. 
 \begin{equation} \label{eq:conflict_3.1}
+e_{o} + o_{l1} + o_{l2} \rightarrow e_{l}
+\end{equation} 
+Moreover, we also have another set of operations $O_{R}$ = $\{$$o_{r1}$, $o_{r2}$$\}$ that we apply to $e_{o}$ that produces element $e_{r}$.
+\begin{equation} \label{eq:conflict_3.2}
+e_{o} + o_{r1} + o_{r2} \rightarrow e_{r}
+\end{equation} 
+Instead of calculating conflict between operations, we start by checking the equivalency of the states of an element on both sides. If the states on both sides are equivalent then we can argue that there is no conflict between operations that produce both equal states, $e_{l}$ and $e_{r}$. 
+\begin{equation} \label{eq:conflict_3.3}
+e_{l} \equiv e_{r} \Rightarrow \neg(\exists o_{l} \in O_{L} \;!\; \exists o_{r} \in O_{R})
+\end{equation} 
+Therefore, we can also argue that if both states, $e_{l}$ and $e_{r}$, are not equivalent and, at least, there is an operation applied to the element on each side then it can be concluded that there is, at least, one operation of operations $O_{L}$ that is in conflict with, at least, one operation of the operations $O_{R}$. 
+\begin{equation} \label{eq:conflict_3.10}
 \begin{split}
-& e_{xl} \not\equiv e_{xr} \wedge |O_{XL}| > 0 \wedge |O_{XR}| \Rightarrow\\
-& \exists o_{xl} \in O_{XL} \;!\; \exists o_{xr} \in O_{XR}
+& e_{l} \not\equiv e_{r} \wedge |O_{L}| > 0 \wedge |O_{R}| > 0 \Rightarrow\\
+& \exists o_{l} \in O_{L} \;!\; \exists o_{r} \in O_{R}
 \end{split}
 \end{equation} 
-Where $e_{xl}$ and $e_{xr}$ are the states of element \textsf{x} on the left and right sides respectively, and $O_{XL}$ and $O_{XR}$ are two sets of operations specifically applied to element \textsf{x} on the left and right sides respectively.
+Such calculation is possible since in every element or feature we record all operations that affect them during the construction of the element tree. 
+
+
+\IncMargin{1.5em}
+\begin{algorithm*}
+    \begin{footnotesize}
+        \SetKwInOut{Input}{input}
+        \SetKwInOut{Output}{output}
+        \Input{an instance of ElementTree $elementTree$}
+        \Begin{
+            $conflictList$ $\leftarrow$ ConflictList()\;
+            \ForEach{$element$ \In $elementTree$}{
+                \If{isLeftDeleted($element$) \Or isRightDeleted($element$)}{
+                    $leftEvents$ $\leftarrow$ getAllRelatedLeftEvents($element$)\;
+                    $rightEvents$ $\leftarrow$ getAllRelatedRightEvents($element$)\;
+                    \If{size($leftEvents$) > 0 \AndA size($rightEvents$) > 0}{
+                        $conflict$ $\leftarrow$ createConflict($leftEvents$, $rightEvents$)\;
+                        addConflict($conflict$, $conflictList$)\;
+                    }
+                }
+                \If{getLeftContainer($element$) <> getRightContainer($element$) \Or getLeftContainingFeature($element$) <> getRightContainingFeature($element$)}{
+                    $leftEvents$ $\leftarrow$ getAllRelatedLeftEvents($element$)\;
+                    $rightEvents$ $\leftarrow$ getAllRelatedRightEvents($element$)\;
+                    \If{size($leftEvents$) > 0 \AndA size($rightEvents$) > 0}{
+                        $conflict$ $\leftarrow$ createConflict($leftEvents$, $rightEvents$)\;
+                        addConflict($conflict$, $conflictList$)\;
+                    }
+                }
+                \ForEach{$feature$ \In getFeatures($element$)}{
+                    \uIf{isSingleValued($feature$)}{
+                        $leftEvents$ $\leftarrow$ getAllRelatedLeftEvents($element$, $feature$)\;
+                        $rightEvents$ $\leftarrow$ getAllRelatedRightEvents($element$, $feature$)\;
+                        \If{size($leftEvents$) > 0 \AndA size($rightEvents$) > 0}{
+                            $conflict$ $\leftarrow$ createConflict($leftEvents$, $rightEvents$)\;
+                            addConflict($conflict$, $conflictList$)\;
+                        }
+                    }\ElseIf{isMultiValued($feature$)}{
+                        \uIf{isOrdered($feature$)}{
+                            $values$ $\leftarrow$ getUnequalLeftAndRightValues($feature$)\;
+                            \ForEach{$value$ \In $values$}{
+                                $leftEvents$ $\leftarrow$ getAllRelatedLeftEvents($element$, $feature$, $value$)\;
+                                $rightEvents$ $\leftarrow$ getAllRelatedRightEvents($element$, $feature$, $value$)\;
+                                \If{size($leftEvents$) > 0 \AndA size($rightEvents$) > 0}{
+                                    $conflict$ $\leftarrow$ createConflict($leftEvents$, $rightEvents$)\;
+                                    addConflict($conflict$, $conflictList$)\;
+                                }       
+                            }
+                        }\ElseIf{\Not isOrdered($feature$)}{
+                            $values$ $\leftarrow$ getXORLeftAndRightValues($feature$)\;
+                            \ForEach{$value$ \In $values$}{
+                                $leftEvents$ $\leftarrow$ getAllRelatedLeftEvents($element$, $feature$, $value$)\;
+                                $rightEvents$ $\leftarrow$ getAllRelatedRightEvents($element$, $feature$, $value$)\;
+                                \If{size($leftEvents$) > 0 \AndA size($rightEvents$) > 0}{
+                                    $conflict$ $\leftarrow$ createConflict($leftEvents$, $rightEvents$)\;
+                                    addConflict($conflict$, $conflictList$)\;
+                                }       
+                            }
+                        }
+                    }
+                }
+            }
+            \Return{$conflictList$}\;
+        }
+    \end{footnotesize}
+    \caption{Algorithm for conflict detection using element tree.}
+    \label{alg:conflict_detection}
+\end{algorithm*}
+\DecMargin{1.5em}
+
+
+\begin{table*}[]
+    \centering
+    \caption{Conflicting change events in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} identified using our proposed conflict detection.}
+    \label{table:conflicts_cbp}
+    \begin{tabular}{|l|l|l|l|}
+        \hline
+        \multicolumn{1}{|c|}{{\color[HTML]{000000} \textbf{ID}}} & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Left Change Events (Bob)}}}                                                                                                                            & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Right Change Events (Alice)}}}                                                                                                                  & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Type}}}                 \\ \hline
+        CB1                                                      & set troll.name from "Troll" to "Ogre"                                                                                                                                                                    & set troll.name from "Troll" to "Orc"                                                                                                                                                              & \begin{tabular}[c]{@{}l@{}}non-\\ commutability\end{tabular}              \\ \hline
+        CB2                                                      & move target in character.parameters from 1 to 2                                                                                                                                                          & move target in character.parameters from 1 to 0                                                                                                                                                   & \begin{tabular}[c]{@{}l@{}}non-\\ commutability\end{tabular}              \\ \hline
+        CB3                                                      & \begin{tabular}[c]{@{}l@{}}unset cast.name from "cast" to null\\ remove cast from giant.operations at 0\\ delete cast type Operation\\ unset giant.name from "Giant" to null\\ delete giant\end{tabular} & \begin{tabular}[c]{@{}l@{}}remove cast from giant.operations at 0\\ add cast to mage.operations at 0\\ remove smash from knight.operations at 0\\ add smash to giant.operations at 1\end{tabular} & \begin{tabular}[c]{@{}l@{}}non-\\ applicability,\\ composite\end{tabular} \\ \hline
+    \end{tabular}
+\end{table*}
+
  
-
-
-
 \section{Evaluation}
 \label{sec:evaluation}
 In this section, we present the method that we employed to evaluate our change-based comparison approach and discuss the results. We also present the limitations and threats to the validity of the evaluation.
