@@ -143,7 +143,7 @@
 \newcommand{\eqnum}{\refstepcounter{equation}\textup{\tagform@{\theequation}}}
 
 %
-\title{Conflict Detection using Change-based Persistence}
+\title{Model Differencing and Conflict Detection using Change-based Persistence}
 %\subtitle{Do you have a subtitle?\\ If so, write it here}
 \author{Alfa Yohannis\inst{1,3} \and Horacio Hoyos Rodriguez\inst{1} \and Fiona Polack\inst{2} \and Dimitris Kolovos\inst{1}% etc
 % \thanks is optional - remove next line if not needed
@@ -784,12 +784,12 @@ e_{o} + o_{l} \equiv e_{o} + o_{r} \Rightarrow o_{l}\;!_{p}\;o_{r}
         \multicolumn{1}{|c|}{{\color[HTML]{000000} \textbf{ID}}} & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Left Change Events (Bob)}}} & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Right Change Events (Alice)}}}                                      & \multicolumn{1}{c|}{{\color[HTML]{000000} \textbf{Type}}}           \\ \hline
         EC1                                                      & set character.name from "Character" to "Hero"                                 & set character.name from "Character" to "Hero"                                                                         & \begin{tabular}[c]{@{}l@{}}pseudo\\conflict\end{tabular} \\ \hline
         EC2                                                      & set troll.name from "Troll" to "Ogre"                                         & set troll.name from "Troll" to "Orc"                                                                                  & \begin{tabular}[c]{@{}l@{}}real conflict\end{tabular}        \\ \hline
-        EC3                                                      & delete cast                                                                   & \begin{tabular}[c]{@{}l@{}}remove smash from knight.operations at 0\\ add smash to giant.operations at 0\end{tabular} & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}        \\ \hline
-        EC4                                                      & delete giant                                                                  & \begin{tabular}[c]{@{}l@{}}remove cast from giant.operations at 1\\ add cast to mage.operations at 0\end{tabular}     & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}        \\ \hline
+        EC3                                                      & delete cast                                                                  & \begin{tabular}[c]{@{}l@{}}remove cast from giant.operations at 1\\ add cast to mage.operations at 0\end{tabular}     & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}        \\ \hline
+        EC4                                                      & delete giant                                                                   & \begin{tabular}[c]{@{}l@{}}remove smash from knight.operations at 0\\ add smash to giant.operations at 0\end{tabular} & \begin{tabular}[c]{@{}l@{}}non-\\ applicability\end{tabular}        \\ \hline
     \end{tabular}
 \end{table*}
 
-Using (\ref{eq:conflict_1.8}), (\ref{eq:conflict_1.9}), and (\ref{eq:conflict_1.10}) and information in Listings \ref{lst:cbp_right_state} and \ref{lst:cbp_left_state}, we can identify four conflicts -- presented in Table \ref{table:conflicts_emfc} along with their conflicting change events. Conflict \textsf{EC1} is a pseudo duality conflict since both modify the same class \textsf{character}'s feature \textsf{name} resulting the same end states, ``Hero'' or ``Hero''. Conflict \textsf{EC2} is a duality conflict. Applying changing \textsf{troll}'s \textsf{name} to ``Ogre'' and \textsf{troll}'s \textsf{name} to ``Orc'' produces two different states -- ``Ogre'' and ``Orc''. Conflicts \textsf{EC3} and \textsf{EC4} are non-applicability conflicts since if we delete operation \textsf{cast} first then it cannot be added to class \textsf{giant}'s operations, and if we delete class \textsf{giant} first then operation \textsf{cast} cannot be added to that class' operations.
+Using (\ref{eq:conflict_1.8}), (\ref{eq:conflict_1.9}), and (\ref{eq:conflict_1.10}) and information in Listings \ref{lst:cbp_right_state} and \ref{lst:cbp_left_state}, we can identify four conflicts -- presented in Table \ref{table:conflicts_emfc} along with their conflicting change events. Conflict \textsf{EC1} is a pseudo duality conflict since both modify the same class \textsf{character}'s feature \textsf{name} resulting the same end states, ``Hero'' or ``Hero''. Conflict \textsf{EC2} is a duality conflict. Applying changing \textsf{troll}'s \textsf{name} to ``Ogre'' and \textsf{troll}'s \textsf{name} to ``Orc'' produces two different states -- ``Ogre'' and ``Orc''. Conflicts \textsf{EC3} and \textsf{EC4} are non-applicability conflicts since if we delete operation \textsf{cast} first then it cannot removed from class \textsf{giant}'s operations to be added to \textsf{mage}'s \textsf{operations}, and if we delete class \textsf{giant} first then operation \textsf{smash} cannot be added to that class' operations.
 
 Conflict detection in state-based comparison might not be accurate since the derived differences/operations might not reflect the real historical changes of a model.
 For example, EMF Compare does not detect that Alice and Bob modified the same element -- parameter \textsf{target} -- as indicated by line 29 in List. \ref{lst:cbp_right} and line 35 in List. \ref{lst:cbp_left} . Using an LCS algorithm, the derived operations related to the feature \textsf{parameters} of element \textsf{attack}, which if presented as change events, are expressed as [\texttt{\small \textbf{move} target \textbf{in} attack.parameters \textbf{from} 1 \textbf{to} 2}] for Bob's version and [\texttt{\small \textbf{move} gem \textbf{in} attack. parameters \textbf{from} 1 \textbf{to} 2}] for Alice's version. Using (\ref{eq:conflict_1.3}), both operations are not in conflict since both operations modify two different elements, \textsf{target} and \textsf{gem}. The result is different if we employ change-based approach to detect conflicts using the change event records in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}. We explain this in Section \ref{sec:change_based_conflict_detection_emf_store}.
@@ -843,7 +843,20 @@ The inconsideration of eventual states also causes the assignments of generaliza
 
 In state-based conflict detection, the latter case (ES1) is not a conflict since the values of class \textsf{troll}'s feature \textsf{generalization} in the Jane's, Bob's, and Alice's versions are indentical -- all are null. Thus, there are no \textit{derived} operations that concurrently modify class \textsf{troll}'s feature \textsf{generalization}. Conflict ES4 is a non-applicability, composite conflict. Moving element \textsf{smash} from class \textsf{knight} to class \textsf{giant} and moving element \textsf{cast} from class \textsf{giant} to class \textsf{mage} require the deletion of class \textsf{giant} to be executed later in order to be applicable. Conflict ES5 is a non-commutability conflict. The \text{name} of class \textsf{troll} have an eventual value ``Ogre'' or ``Orc'' depending on the execution order of the conflicting operations.
 
-\section{Change-based Conflict Detection: Epsilon CBP}
+%load local changes
+%load remote changes
+%indexing id and objects
+%
+%calculate candidate buckets
+%- flaten local packages
+%- flaten remote packages
+%
+%Mapping elements to their features
+%
+%Represents a bucket containing operations that potentially conflict but that do not necessarily conflict. It also
+%includes the involved model element ids and the priority of each operation. The operation with the highest priority is used to determine which of the operations is used to represent all my and all their operations in a conflict. The operation with the highest priority is selected for representation.
+
+\subsection{Change-based Conflict Detection: Epsilon CBP}
 \label{change_based_conflict_detection_epsilon_cbp}
 
 In our conflict detection, we take two strategies from both change and state-based conflict detections to improve the accuracy of our approach. First, we exploit change events to accurately address real historical changes -- not derived ones -- of models. Second, we also take into account the original and eventual states of models being compared. Thus, two sequences of operations that produce two eventual states that is equal to an original state should not be treated in conflict. For the latter strategy, the original and eventual states is are already calculated during the construction of the \textsf{element tree}. Since we also record all change events to every element and feature that they affect, we can retrieve all related change events that produce the eventual state of an element or feature. 
@@ -1012,6 +1025,122 @@ Another example to understand how \textsf{getUnequalLeftAndRightValues} works is
 
 Conflict detection for un-odered, multi-valued features is handled at lines 54 to 67. Instead of using function \textsf{getUnequalLeftAndRightValues}, it employs function \textsf{getXORLeftAndRightValues}. The function also returns all values from left and right sides that are not equal to their original states but only in terms of (in)existence since indexing is not considered in un-ordered features. The procedure to detect a conflict is similar to the procedure for ordered features except that it check the existence of values (function \textsf{isExisted}) to determine if a conflict is \textsf{PSEUDO} or not.
 
+\begin{figure*}
+    \begin{tabular}{l|c|r}
+        \begin{subfigure}[t]{0.31\linewidth}
+            \includegraphics[width=\linewidth]{class_diagram_merged_ecbp}
+            \caption{Epsilon CBP}
+            \label{fig:class_diagram_merged_ecbp}
+        \end{subfigure}
+        &
+        \begin{subfigure}[t]{0.31\linewidth}
+            \includegraphics[width=\linewidth]{class_diagram_merged_emfc}
+            \caption{EMF Compare}
+            \label{fig:class_diagram_merged_emfc}
+        \end{subfigure}
+        &
+        \begin{subfigure}[t]{0.31\linewidth}
+            \includegraphics[width=\linewidth]{class_diagram_merged_emfs}
+            \caption{EMF Store}
+            \label{fig:class_diagram_merged_emfs}
+        \end{subfigure}
+    \end{tabular}
+    \caption{Merged models of models in Fig. \ref{fig:class_diagram_rpg} after applying all-left-to-right merging.}
+    \label{fig:class_diagram_merged}
+\end{figure*}
+
+\section{Merging}
+\label{sec:merging}
+Conflict resolution and merging strategies are out of the scope of this paper. However, it is important to present the merged models of these three approaches in order inspect their correctness. Thus, we present the merged models of the models in Fig. \ref{fig:class_diagram_rpg} using these three different approaches. The merge is all-left-to-right merge which means the left changes is prioritised above right changes. In other words, the right changes is applied first to the original model so that the left changes can override the right changes. If there is a conflict then the conflicting right changes are cancelled. In EMF Compare, this cancellation means only the left changes are executed, the right changes are \emph{not executed}, while, in Epsilon CBP and EMF Store, the right changes are \emph{reversed} so that the affected elements are brought back to their original states.    
+
+In the default implementation of EMF Compare, the all-left-to-right merge sets the right model as the target and the left model as the source. This means the left changes are not applied to the original model. Instead, they are applied to the right model. Using this strategy, if we resolve all the conflicts in Table \ref{table:conflicts_emfc} using the all-left-to-right merge, we get a merged model as in Fig. \ref{fig:class_diagram_merged_emfc}. All the right events are not executed. Instead, in the right model, class \textsf{character}'s feature \text{name} is set to ``Hero'' and class \textsf{troll}'s feature \textsf{name} is set to ``Ogre''. Also, operation \textsf{cast} and class \textsf{giant} are removed from the right model. The removal of class \textsf{giant} also removes operation \textsf{smash} since the operation is contained by the class in the right model. 
+
+For Epsilon CBP and EMF Store, applying the all-left-to-right merging requires all the right events of the conflicts in Tables \ref{table:conflicts_emfs} and \ref{table:conflicts_cbp} to be reversed. This reversal brings back the states of the elements affected by the conflicting right events to their original states which makes the conflicting left events safe to be applied to the original model. All right events are applied first followed by the reversed conflicting right events and then by all left events (see Listings \ref{lst:cbp_merged_emfs} and \ref{lst:cbp_merged_ecbp}). In this order, the events are applied to the original model, not the right model as in the EMF Compare, to produce the merged model.
+
+\begin{lstlisting}[firstnumber=1,style=eol,caption={Merged change events (operations) of the models in Fig. \ref{fig:class_diagram_rpg} and Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} using EMF Store. The commented lines are added only to improve readability.},label=lst:cbp_merged_emfs]
+#--right events--
+move target in attack.parameters from 1 to 0
+remove smash from knight.operations at 0 composite l1
+add smash to giant.operations at 0 composite l1
+remove cast from giant.operations at 1 composite l2
+add cast to mage.operations at 0 composite l2
+create rightGen type Generalization
+set rightGen.general to character
+set troll.generalization to rightGen
+set character.name from "Character" to "Hero"
+remove rightGen from troll.generalization composite l3
+set mage.generalization to rightGen composite l3
+set troll.name from "Troll" to "Orc"
+#--reversed conflicting right events--
+set troll.name from "Orc" to "Troll"
+remove rightGen from mage.generalization composite l3r
+set troll.generalization to rightGen composite l3r
+set character.name from "Hero" to "Character"
+remove rightGen from troll.generalization
+set rightGen.general from character to null
+delete rightGen
+remove cast from mage.operations at 0 composite l2r
+add cast to giant.operations at 1 composite l2r
+remove smash from giant.operations at 0 composite l1r
+add smash to knight.operations at 0 composite l1r
+move target in attack.parameters from 0 to 1
+#--left events--
+create leftGen type Generalization
+set leftGen.general to character
+set troll.generalization to leftGen
+set character.name from "Character" to "Hero"
+remove leftGen from troll.generalization composite r1
+set knight.generalization to leftGen composite r1
+move target in attack.parameters from 1 to 2
+unset cast.name from "cast" to null composite r2
+remove cast from giant.operations at 0 composite r2
+delete cast composite r2
+unset giant.name from "Giant" to null composite r2
+delete giant comp r2
+set troll.name from "Troll" to "Ogre"
+\end{lstlisting}
+
+\vspace{-20pt}
+\begin{lstlisting}[firstnumber=1,style=eol,caption={Merged change events (operations) of the models in Fig. \ref{fig:class_diagram_rpg} and Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} using Epsilon CBP. The commented lines are added only to improve readability.},label=lst:cbp_merged_ecbp]
+#--right events--
+move target in attack.parameters from 1 to 0
+remove smash from knight.operations at 0 composite l1
+add smash to giant.operations at 0 composite l1
+remove cast from giant.operations at 1 composite l2
+add cast to mage.operations at 0 composite l2
+create rightGen type Generalization
+set rightGen.general to character
+set troll.generalization to rightGen
+set character.name from "Character" to "Hero"
+remove rightGen from troll.generalization composite l3
+set mage.generalization to rightGen composite l3
+set troll.name from "Troll" to "Orc"
+#--reversed conflicting right events--
+set troll.name from "Orc" to "Troll"
+remove cast from mage.operations at 0 composite l2r
+add cast to giant.operations at 1 composite l2r
+remove smash from giant.operations at 0 composite l1r
+add smash to knight.operations at 0 composite l1r
+move target in attack.parameters from 0 to 1
+#--left events--
+create leftGen type Generalization
+set leftGen.general to character
+set troll.generalization to leftGen
+set character.name from "Character" to "Hero"
+remove leftGen from troll.generalization composite r1
+set knight.generalization to leftGen composite r1
+move target in attack.parameters from 1 to 2
+unset cast.name from "cast" to null composite r2
+remove cast from giant.operations at 0 composite r2
+delete cast composite r2
+unset giant.name from "Giant" to null composite r2
+delete giant comp r2
+set troll.name from "Troll" to "Ogre"
+\end{lstlisting}
+
+The drawback of the EMF Compare approach is that it set the right model as the target for merging changes resulting the lost of operation \textsf{smash} in the merged model (Fig. \ref{fig:class_diagram_merged_emfc}). In contrast, Epsilon CBP and EMF Store reverse the event that moves operation \textsf{smash} from class \textsf{knight} to class \textsf{giant} so that it moves back operation \textsf{smash} from class \textsf{giant} to class \textsf{knight}. The drawback of EMF Store is that it does not concern about the eventual states produced by the conflicting events. It only concern that a feature has been modified concurrently on both sides identified by the presence of, at least, an event on each side. For example, the eventual states of class \textsf{troll}'s feature \textsf{generalization} are \textsf{null} in the original, left, and right models. However, these are not considered by EMF Store. Instead, it only identifies that there are events on both sides associated to this feature. Thus, conflict \textsf{ES1} in \ref{table:conflicts_emfs} is generated. In consequence, all events related to the feature on the right side, and the events that are part of their composite events, are reversed resulting the exclusion of generalization \textsf{rightGen} from the merged model. This drawback has been addressed by the Epsilon CBP by checking the equality of the original, left, and right states of the feature. Since they are all equal then there is no conflict between the events. Thus, Epsilon CBP produces a merged model as in Fig. \ref{fig:class_diagram_merged_ecbp}.
+ 
+
 \section{Evaluation Method}
 \label{sec:evaluation}
 In this section, we present the method that we employed to evaluate our change-based comparison approach and discuss the results. We also present the limitations and threats to the validity of the evaluation.
@@ -1037,21 +1166,21 @@ Since the change-based and state-based approaches can produce a different number
 
 \subsection{Conflict Detection}
 \label{sec:conflict_detection_evaluation}
-In evaluating our conflict detection approach, basically we followed the similar procedures as in the model differencing evaluation, except that we add another implementation of change-based model persistence (EMF Store \cite{koegel2010emfstore}) to compare it with our approach. We did not include it in the model differencing evaluation since it works purely on operations, and it is designed to identify conflict between operations; not for finding differences between models. We imported the changes persisted in our change-based format into EMF Store by replaying the changes in the EMF Store. Thus, we could obtained the same changes but in the EMF Store format. Since in this evaluation we used two change-based persistence: our approach and EMF Store, we use the term Epsilon CBP to refer to our approach.
+In evaluating our conflict detection approach, basically we followed the similar procedures as in the model differencing evaluation, except that we add another implementation of change-based model persistence (EMF Store \cite{koegel2010emfstore}) to compare it with our approach. We did not include it in the model differencing evaluation since it works purely on operations, and it is designed to identify conflict between operations; not for finding differences between models. We imported the changes persisted in our change-based format into EMF Store by replaying the changes in the EMF Store. Thus, we could obtain equivalent changes but in the EMF Store format. Since in this evaluation we used two change-based persistence: our approach and EMF Store, we use the term Epsilon CBP to refer to our approach. Due to slow execution of replaying \textsf{delete} event in EMF Store, we have to reduce the size of the models to 70 thousand elements each and the number of changes to 550 thousands with 25 thousand changes for each measurement point -- 22 measurement points in total.
 
-\begin{figure*}
-    \vspace{-26pt}
-    \begin{subfigure}[t]{0.33\linewidth}
+\begin{figure*}[ht]
+%    \vspace{-26pt}
+    \begin{subfigure}[]{0.33\linewidth}
     \includegraphics[width=\linewidth]{mixed-count-events}
     \caption{total elements, affected elements, and diffs}
     \label{fig:modification_course}
     \end{subfigure}
-    \begin{subfigure}[t]{0.33\linewidth}
+    \begin{subfigure}[]{0.33\linewidth}
         \includegraphics[width=\linewidth]{mixed-time-events}
         \caption{execution time}
         \label{fig:time_diffs}
     \end{subfigure}
-    \begin{subfigure}[t]{0.33\linewidth}
+    \begin{subfigure}[]{0.33\linewidth}
         \includegraphics[width=\linewidth]{mixed-memory-events}
         \caption{memory footprint}
         \label{fig:memory_diffs}
@@ -1061,7 +1190,7 @@ In evaluating our conflict detection approach, basically we followed the similar
 \end{figure*}
 
 \vspace{-5pt}
-\section{Results and Discussion}
+\section{Evaluation Results and Discussion}
 \label{sec:discussion}
 In this section, we report on the obtained results in terms of comparison time and memory footprint for both model differencing and conflict detection. 
 
@@ -1211,11 +1340,59 @@ Figures \ref{fig:operation_time_events} and \ref{fig:operation_memory_events} ex
     \label{fig:conflict_events}
 \end{figure*}
 
-This section presents the results of the conflict detection evaluation. Similar to the results in the model differencing evaluation (Fig. \ref{fig:modification_course}), the growing number of change events in the conflict detection evaluation is also followed by the logarithmic increase of affected elements (Fig. \ref{fig:conflict-size-events}). The total number of both elements can also be kept relatively constant due to 1:1 ratio of occurrence of \textsf{add} and \textsf{delete} operations. 
+This section presents the results of the conflict detection evaluation. Similar to the results in the model differencing evaluation (Fig. \ref{fig:modification_course}), the growing number of change events in the conflict detection evaluation is also followed by the logarithmic increase of affected elements (Fig. \ref{fig:conflict-size-events}). The total number of both elements can also be kept relatively constant due to 1:1 ratio of \textsf{add} and \textsf{delete} operations' occurrence. These change events produce different numbers of conflicts for Epsilon CBP, EMF Compare, and EMF Store as can be seen in Fig. \ref{fig:conflict-count-events}. However, the numbers of conflicts detected are slightly different due to their distinct conflict detection approaches. 
 
-These change events produce different numbers of conflicts for Epsilon CBP, EMF Compare, and EMF Store as can be seen in Fig. \ref{fig:conflict-count-events}. Epsilon CBP detects the least number of conflicts, slightly below the number of conflicts detected by EMF Store. EMF Store detects more conflicts than Epsilon CBP since EMF Store does not consider the eventual states of elements in its conflict detection; it only considers if elements have been changed or not. Moreoever, we can also notice that EMF Compare detects more conflicts than the other two implementations. It is possible since EMF Compare treats constituent conflicts of a composite conflict as separate conflicts. 
+Fig. \ref{fig:conflict-time-events} exhibits Epsilon CBP outperforms EMF Compare and EMF Store in terms of execution time in detecting conflicts. In a comparison of two models that involves 1.01 million elements in total and 1.3 millions change events (the last measurement point), Epsilon CBP takes only 6.7 seconds to detect all conflicts while EMF Compare requires 21.4 seconds to finish the conflict detection. Both conflict detections are faster than EMF Store that needs 1 minute and 34.6 seconds to complete detecting conflicts. Fig. \ref{fig:conflict-memory-events} also shows Epsilon CBP outmatches EMF Compare and EMF Store in terms of memory footprint in conflict detection. At the last measurement point, Epsilon CBP only consumes 5 GBs which is much lesser than EMF Compare and EMF Store that occupy around 16 and 26 GBs of memory footprint respectively.
 
-Fig. \ref{fig:conflict-time-events} exhibits Epsilon CBP outperforms EMF Compare and EMF Store in terms of execution time in detecting conflicts. In a comparison of two models that consists of around 32 million elements with 1.1 millions change events (the 10th measurement point), Epsilon CBP takes only 4.8 seconds to detect all conflicts while EMF store requires 1 minute and 55 seconds to finish the conflict detection. Both conflict detections are relatively much faster than EMF Compare that needs around 1 hour and 43 minutes to finish detecting conflicts. Fig. \ref{fig:conflict-memory-events} also shows Epsilon CBP outmatches EMF Compare in terms of memory footprint in conflict detection. At the 10th measurement point, Epsilon CBP only consumes around 2.9 GBs which is much lesser than EMF Compare and EMF Store that occupy around 13.9 and 9.8 GBs of memory footprint respectively.
+Fig. \ref{fig:conflict_time_events} shows the detailed view of Epsilon CBP, EMF Compare, and EMF Store on the time required to complete conflict detection. As can be seen in the Fig. \ref{fig:ecbp-conflict-time-events}, Epsilon CBP takes most of the time used to load change events and construct element tree compared to the time it takes for identifying conflicts. In detecting conflicts, the Epsilon CBP does not requires to perform differencing since changes are already available in the form of change events Thus, the differencing is not included in the diagram. In EMF Compare, at the last measurement point, we can notice that the time taken for matching and identifying conflicts is less than 6 seconds each, which is smaller than the time used for identifying differences that is 12.6 seconds (Fig. \ref{fig:emfc-conflict-time-events}). The differencing takes a great portion of the time since it needs to derive differences twice; differences between left and original models and right and original models. The time for for matching and differencing tends to have only slight increase since the sizes of the models are set to be as constant as possible (Fig. \ref{fig:modification_course}). In contrast, the time for detecting conflicts tends to grow faster than both due to the increasing number of conflicting (derived) changes as the number of modification -- change events -- increases. In detecting conflicts, EMF Store allocates more than a half of the consumed time for identifying conflicts. The rest of the time is used for loading changes and mapping between affected elements and their ids (Fig. \ref{fig:emfs-conflict-time-events}). 
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[t]{0.32\linewidth}
+        \includegraphics[width=\linewidth]{ecbp-conflict-time-events}
+        \caption{Epsilon CBP}
+        \label{fig:ecbp-conflict-time-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\linewidth}
+        \includegraphics[width=\linewidth]{emfc-conflict-time-events}
+        \caption{EMF Compare}
+        \label{fig:emfc-conflict-time-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\linewidth}
+        \includegraphics[width=\linewidth]{emfs-conflict-time-events}
+        \caption{EMF Store}
+        \label{fig:emfs-conflict-time-events}
+    \end{subfigure}
+    \caption{Detailed view of Epsilon CBP vs. EMF Compare vs. EMF Store on the time required for conflict detection.}
+    \label{fig:conflict_time_events}
+\end{figure*}
+
+In terms of memory footprint, Epsilon CBP allocates most of the memory space for element tree construction and the rest is for the loading change events and identifying conflicts (Fig. \ref{fig:ecbp-conflict-memory-events}). The reason for this is due to our technical implementation explained in Section \ref{sec:mixed-operation}. In EMF Compare (Fig. \ref{fig:emfc-conflict-memory-events})), the amount of memory used for matching and differencing only increases slightly due the sizes of the models that are set to be as constant as possible (Fig. \ref{fig:modification_course}). In contrast, the memory used for detecting conflict increases positively as the number of detected conflicts rises (Fig. \ref{fig:conflict-count-events}). For EMF Store, the amount of memory used for loading changes and mapping is slightly above the amount of memory for identifying differences (Fig. \ref{fig:emfs-conflict-memory-events}).
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[t]{0.32\linewidth}
+        \includegraphics[width=\linewidth]{ecbp-conflict-memory-events}
+        \caption{Epsilon CBP}
+        \label{fig:ecbp-conflict-memory-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\linewidth}
+        \includegraphics[width=\linewidth]{emfc-conflict-memory-events}
+        \caption{EMF Compare}
+        \label{fig:emfc-conflict-memory-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.32\linewidth}
+        \includegraphics[width=\linewidth]{emfs-conflict-memory-events}
+        \caption{EMF Store}
+        \label{fig:emfs-conflict-memory-events}
+    \end{subfigure}
+    \caption{Detailed view of Epsilon CBP vs. EMF Compare vs. EMF Store on the memory footprint for conflict detection.}
+    \label{fig:conflict_memory_events}
+\end{figure*}
 
 Based on the findings in model differencing and conflict detection evaluation, we argue that the change-based comparison approach works at its best for large models that have been modified a moderate number of times. Models that have been excessively modified and experience significant reduction on model size could impair the performance of change-based comparison as a great number of change records have to be read and loaded into memory. 
 
