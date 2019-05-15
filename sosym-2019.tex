@@ -676,7 +676,12 @@ delete giant comp r2
 set troll.name from "Troll" to "Ogre"
 \end{lstlisting}
 
-In Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we also introduce composite events -- lines with keyword \textsf{composite} -- that represent composite operations. Composite operations are operations that should be treated as one composition -- identified with the same composite id. For example, moving an element from a container to another container is composite event since it consists of two operations: removing/unsetting the element from its source container and adding/setting it to its target container (lines 36-37 Listing \ref{lst:cbp_right}). Using the information contained in CBPs in Listings in CBPs in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we can construct an element tree as depicted in Fig. \ref{fig:element_tree_game} using the element tree construction method presented in Section \ref{sec:tree_construction}. 
+In Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we also introduce composite events -- lines with keyword \textsf{composite} -- that represent composite operations. 
+Composite operations are operations that should be treated as one composition -- identified with the same composite id. 
+For example, moving an element from a container to another container is composite event since it consists of two operations: 
+removing/unsetting the element from its source container and adding/setting it to its target container (lines 36-37 Listing \ref{lst:cbp_right}). 
+Using the information contained in CBPs in Listings in CBPs in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, 
+we can construct an element tree as depicted in Fig. \ref{fig:element_tree_game} using the element tree construction method presented in Section \ref{sec:tree_construction}. 
 
 \begin{figure*}
     \centering
@@ -685,41 +690,49 @@ In Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we also introduce compos
     \label{fig:element_tree_game}
 \end{figure*} 
 
-%\begin{table*}[]
-%    \centering
-%    \caption{}
-%    \label{tab:my-table}
-%    \begin{scriptsize}
-%    \begin{tabular}{|l|l|l|}
-%        \hline
-%        \multicolumn{1}{|c|}{\textbf{Key}} & \multicolumn{1}{c|}{\textbf{Left Change Events}}                                                                 & \multicolumn{1}{c|}{\textbf{Right Change Events}}     \\ \hline
-%        character                          &                                                                                                                  &                                                       \\ \hline
-%        character.name                     & set character.name from "Character" to "Hero"                                                                    &                                                       \\ \hline
-%        character.operations.attack        &                                                                                                                  &                                                       \\ \hline
-%        attack                             &                                                                                                                  & move target in attack.parameters from 1 to 0          \\ \hline
-%        attack.parameters.target           &                                                                                                                  & move target in attack.parameters from 1 to 0          \\ \hline
-%        target                             &                                                                                                                  & move target in attack.parameters from 1 to 0          \\ \hline
-%        troll                              &                                                                                                                  &                                                       \\ \hline
-%        troll.name                         &                                                                                                                  &                                                       \\ \hline
-%        troll.generalization               & set troll.generalization to leftGen                                                                              &                                                       \\ \hline
-%        giant                              &                                                                                                                  &                                                       \\ \hline
-%        giant.operations.cast              &                                                                                                                  &                                                       \\ \hline
-%        giant.operations.smash             &                                                                                                                  &                                                       \\ \hline
-%        knight                             &                                                                                                                  & remove smash from knight.operations at 0 \\ \hline
-%        knight.generalization              &                                                                                                                  & remove smash from knight.operations at 0              \\ \hline
-%        knight.operations.smash            &                                                                                                                  & remove smash from knight.operations at 0              \\ \hline
-%        mage                               &                                                                                                                  &                                                       \\ \hline
-%        mage.generalization                &                                                                                                                  &                                                       \\ \hline
-%        mage.operations.cast               &                                                                                                                  &                                                       \\ \hline
-%        leftGen                            & \begin{tabular}[c]{@{}l@{}}create leftGen type Generalization\\ set troll.generalization to leftGen\end{tabular} &                                                       \\ \hline
-%        leftGen.general                    & set leftGen.general to character                                                                                 &                                                       \\ \hline
-%        rightGen                           &                                                                                                                  &                                                       \\ \hline
-%        rightGen.general                   &                                                                                                                  &                                                       \\ \hline
-%        smash                              &                                                                                                                  & remove smash from knight.operations at 0              \\ \hline
-%        cast                               &                                                                                                                  &                                                       \\ \hline
-%    \end{tabular}
-%\end{scriptsize}
-%\end{table*}
+During the the construction of the element tree, these events in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} are registered to the affected elements, features, and values. 
+This registration forms one-to-many relationships between keys and the events. 
+The keys are \textsf{element} for elements, \textsf{element-feature} for single-valued features, and \textsf{element-feature-value} for multivalued-features.
+With this mapping, we can trace all events that affects certain elements, features, and values. 
+The mapping of the events in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} is in Table \ref{tab:keyeventsmap}.
+
+\begin{table}[]
+    \centering
+    \caption{The mapping of elements, features, and values in Fig. \ref{fig:element_tree_game} to the events that affects them.}
+    \label{tab:keyeventsmap}
+    \begin{scriptsize}
+    \begin{tabular}{|m{0.38\linewidth}|m{0.23\linewidth}|m{0.23\linewidth}|}
+        \hline
+        \textbf{Key} & \textbf{Left Events} & \textbf{Right Events} \\ \hline
+        character                          & ol30, ol32                                & or35, or37                                 \\ \hline
+        character.name                     & ol32                                      & or37                                       \\ \hline
+        attack                             & ol35                                      & or29                                       \\ \hline
+        attack.parameters.target           & ol35                                      & or29                                       \\ \hline
+        target                             & ol35                                      & or29                                       \\ \hline
+        troll                              & ol31, ol33                                & or36, or38                                 \\ \hline
+        troll.name                         & ol41                                      & or40                                       \\ \hline
+        troll.generalization               & ol31, ol33                                & or36, or38                                 \\ \hline
+        giant                              & ol37, ol38, ol39, ol40                    & or31, or32                                 \\ \hline
+        giant.name                         & ol38                                      &                                            \\ \hline
+        giant.operations.cast              & ol37                                      & or32                                       \\ \hline
+        giant.operations.smash             &                                           & or31                                       \\ \hline
+        knight                             & ol34                                      & or30                                       \\ \hline
+        knight.generalization              & ol34                                      &                                            \\ \hline
+        knight.operations.smash            &                                           & or30                                       \\ \hline
+        mage                               &                                           & or33, or39                                 \\ \hline
+        mage.generalization                &                                           & or39                                       \\ \hline
+        mage.operations.cast               &                                           & or33                                       \\ \hline
+        leftGen                            & ol29, ol30, ol31, ol33, ol34              &                                            \\ \hline
+        leftGen.general                    & ol30                                      &                                            \\ \hline
+        rightGen                           &                                           & or34, or35, or36, or38, or39               \\ \hline
+        rightGen.general                   &                                           & or35                                       \\ \hline
+        smash                              &                                           & or30, or31                                 \\ \hline
+        cast                               & ol36, ol37, ol38                          & or32, or33                                 \\ \hline
+        cast.name                          & ol36                                      &                                            \\ \hline
+    \end{tabular}
+o: operation; l: left side; r: right side; n: line number in the listing
+\end{scriptsize}
+\end{table}
 
 \section{Conflict Detection}
 \label{sec:conflict_detection}
@@ -1009,7 +1022,12 @@ The algorithm starts by creating a empty list \textsf{conflictList} to contain i
     \end{tabular}
 \end{table*}
 
-As an example, when the iteration reach element \textsf{giant}, the algorithm identifies that the element has been deleted only on the left side. The algorithm then collects all the related events from both. The left events consist of all events as parts of the deletion of element \textsf{giant} composite event. The right events consist of events that remove operation \textsf{smash} from class \textsf{knight} and add it to class \textsf{giant} and events that remove operation \textsf{cast} from class \textsf{giant} to class \textsf{mage}. The algorithm then creates an conflict that consists of these events producing conflict \textsf{CB3} in Table \ref{table:conflicts_cbp}. The conflict is not set \textsf{PSEUDO} since the element is only deleted on the left side. 
+As an example, when the iteration reach element \textsf{giant}, the algorithm identifies that the element has been deleted only on the left side.
+The algorithm then collects all the related events from both. 
+The left events consist of all events as parts of the deletion of element \textsf{giant} composite event. 
+The right events consist of events that remove operation \textsf{smash} from class \textsf{knight} and add it to class \textsf{giant} and events 
+that remove operation \textsf{cast} from class \textsf{giant} to class \textsf{mage}. The algorithm then creates an conflict that consists of these events 
+producing conflict \textsf{CB3} in Table \ref{table:conflicts_cbp}. The conflict is not set \textsf{PSEUDO} since the element is only deleted on the left side. 
 
 Lines 15 to 25 are dedicated to identify conflicts related to cross-container moves. First, the algorithm checks if an element has been moved from its original container to another container, on one of the sides or both sides. If only on one side or both sides the element has been moved to another container, it continues to check the number of events related to the element by firstly obtaining change events related to the element on both sides using functions \textsf{getAllRelatedLeftEvents($element$)} and \textsf{getAllRelatedLeftEvents($element$)} yielding two sets of events, \textsf{leftEvents} and \textsf{rightEvents}. If the element has, at least, one event on each side, a conflict is created containing \textsf{leftEvents} and \textsf{rightEvents}. If on both sides the element is moved to the same container then the conflict is set to \textsf{PSEUDO}. The conflict is then added to \textsf{conflictList}. 
 
