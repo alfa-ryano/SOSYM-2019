@@ -869,11 +869,19 @@ In state-based conflict detection, the latter case (ES1) is not a conflict since
 %Represents a bucket containing operations that potentially conflict but that do not necessarily conflict. It also
 %includes the involved model element ids and the priority of each operation. The operation with the highest priority is used to determine which of the operations is used to represent all my and all their operations in a conflict. The operation with the highest priority is selected for representation.
 
-\subsection{Change-based Conflict Detection: Epsilon CBP}
+\section{Change-based Conflict Detection: Epsilon CBP}
 \label{change_based_conflict_detection_epsilon_cbp}
 
-In our conflict detection, we take two strategies from both change and state-based conflict detections to improve the accuracy of our approach. First, we exploit change events to accurately address real historical changes -- not derived ones -- of models. Second, we also take into account the original and eventual states of models being compared. Thus, two sequences of operations that produce two eventual states that is equal to an original state should not be treated in conflict. For the latter strategy, the original and eventual states is are already calculated during the construction of the \textsf{element tree}. Since we also record all change events to every element and feature that they affect, we can retrieve all related change events that produce the eventual state of an element or feature. 
+In our conflict detection, we take two strategies from both change and state-based conflict detections to improve the accuracy of our approach. 
+First, we exploit change events to accurately address real historical changes -- not derived ones -- of models. 
+Second, we also take into account the original and eventual states of models being compared. 
+Two sequences of operations that produce two eventual states that are equal to an original state should not be treated as in conflict. 
+For the latter strategy, the original and eventual states is are already calculated during the construction of the \textsf{element tree}.
+Since we also record all change events to every element and feature that they affect, 
+we can retrieve all related change events that produce the eventual state of an element or feature. 
 
+\subsection{Theoretical Approach} 
+\label{sec:theoretical_approach}
 Let's say that we have the original state of an element $e_{o}$. We also have a set of operations $O_{L}$ = $\{$$o_{l1}$, $o_{l2}$$\}$ that we apply to $e_{o}$ that changes its state to element $e_{l}$. 
 \begin{equation} \label{eq:conflict_3.1}
 e_{o} + o_{l1} + o_{l2} \rightarrow e_{l}
@@ -903,6 +911,9 @@ As in EMF Compare, we also implement pseudo conflict. Pseudo conflict is a confl
 & \Rightarrow \forall o_{l} \;!_{p}\; \forall o_{r} \;|\; o_{l} \in O_{L}, o_{r} \in O_{R}
 \end{split}
 \end{equation} 
+
+
+
 %Since only the last operation applied to an element that determines the element's eventual state, we can infer that the last operations $e_{ln}$ in $O_{L}$ and $e_{rm}$  in $O_{R}$, where $n$ = $|O_{L}|$ and $m$ = $|O_{R}|$, are the operations that are definitely in conflict. 
 %\begin{equation} \label{eq:conflict_3.11}
 %\begin{split}
@@ -913,6 +924,8 @@ As in EMF Compare, we also implement pseudo conflict. Pseudo conflict is a confl
 %Nonetheless, since we also consider about resolving conflicts, a resolution of two conflicting operations that affect an element should also take into account all preceding operations applied to the element. This means picking one operation from one side as the applied operation does not only cancel the other side operation but also cancels all preceding operations that affected the element on the other side. Cancelling these operations set the element to its original state which makes all the chosen side operations can be applied safely -- avoiding further un-calculated conflicts with the rest of other side operations if we only cancel the last operation. 
 %
 %For example, let's say that  $o_{l1}$ =  [\texttt{\small \textbf{set} x.name \textbf{from} "A" \textbf{to} "B"}] on the left side, and it is also set twice consecutively -- $o_{r1}$ = [\texttt{\small \textbf{set} x.name \textbf{from} "A" \textbf{to} "C"}] and$o_{r2}$ = [\texttt{\small \textbf{set} x.name \textbf{from} "C" \textbf{to} "D"}] -- on the right side. Both operations $o_{r1}$ and $o_{r2}$ are in conflict if we use (\ref{eq:conflict_3.11}). Cancelling operation $o_{r2}$ does not have any affect in resolving the conflict since operation $o_{r1}$ are still in conflict with operation $o_{l1}$. 
+
+
 
 \IncMargin{1.5em}
 \begin{algorithm*}
@@ -1004,9 +1017,20 @@ As in EMF Compare, we also implement pseudo conflict. Pseudo conflict is a confl
 \end{algorithm*}
 \DecMargin{1.5em}
 
+
+\subsection{Procedure for Detecting Conflicts} 
+\label{sec:procedure_for_detecting_conflicts} 
 We perform procedure in Alg. \ref{alg:conflict_detection} and employ (\ref{eq:conflict_3.3}) and (\ref{eq:conflict_3.4}) inside it to identify conflicts between two CBPs. Basically, the algorithm works by iterating through all the elements, features, and values in the element three (Fig. \ref{fig:element_tree_game}) and checking the equivalency of their original and eventual states as well the numbers of operations applied to them. The results are then used as inputs to decide whether a conflict has been detected or not.
 
-The algorithm starts by creating a empty list \textsf{conflictList} to contain identified conflicts (lines 2). The algorithm then iterates through all the elements, features, and values in the element three. At lines 4 to 11, the algorithm checks if there is a conflict related to a deletion of an element. If an element is deleted on one side or both sides, it means that all events related to the element on both sides should be in conflict. To get all the related events, the algorithm use functions \textsf{getAllRelatedLeftEvents(element)} and \textsf{getAllRelatedLeftEvents(element)} (elementact as a map key to access the events) that return two sets of the related events, \textsf{leftEvents} and \textsf{rightEvents} respectively. The related events are events applied to the deleted element, including its sub-elements and features, and events that are parts of composite events. If both sets of events are not empty then a conflict is created containing both sets of events. If the element is deleted on both sides then we set the conflict as \textsf{PSEUDO}. The identified conflict is then added to \textsf{conflictList}.
+The algorithm starts by creating a empty list \textsf{conflictList} to contain identified conflicts (lines 2). 
+The algorithm then iterates through all the elements, features, and values in the element three. 
+At lines 4 to 11, the algorithm checks if there is a conflict related to a deletion of an element.
+If an element is deleted on one side or both sides, it means that all events related to the element on both sides should be in conflict. 
+To get all the related events, the algorithm use functions \textsf{getAllRelatedLeftEvents(element)} 
+and \textsf{getAllRelatedLeftEvents(element)} (elementact as a map key to access the events) that return two sets of the related events, 
+\textsf{leftEvents} and \textsf{rightEvents} respectively. The related events are events applied to the deleted element, including its sub-elements and features, 
+and events that are parts of composite events. If both sets of events are not empty then a conflict is created containing both sets of events. 
+If the element is deleted on both sides then we set the conflict as \textsf{PSEUDO}. The identified conflict is then added to \textsf{conflictList}.
 
 \begin{table*}[ht]
     \centering
@@ -1022,6 +1046,9 @@ The algorithm starts by creating a empty list \textsf{conflictList} to contain i
     \end{tabular}
 \end{table*}
 
+
+\subsubsection{Conflict with Deletion} 
+\label{sec:delete_conflict} 
 As an example, when the iteration reach element \textsf{giant}, the algorithm identifies that the element has been deleted only on the left side.
 The algorithm then collects all the related events from both. 
 The left events consist of all events as parts of the deletion of element \textsf{giant} composite event. 
@@ -1029,18 +1056,33 @@ The right events consist of events that remove operation \textsf{smash} from cla
 that remove operation \textsf{cast} from class \textsf{giant} to class \textsf{mage}. The algorithm then creates an conflict that consists of these events 
 producing conflict \textsf{CB3} in Table \ref{table:conflicts_cbp}. The conflict is not set \textsf{PSEUDO} since the element is only deleted on the left side. 
 
-Lines 15 to 25 are dedicated to identify conflicts related to cross-container moves. First, the algorithm checks if an element has been moved from its original container to another container, on one of the sides or both sides. If only on one side or both sides the element has been moved to another container, it continues to check the number of events related to the element by firstly obtaining change events related to the element on both sides using functions \textsf{getAllRelatedLeftEvents($element$)} and \textsf{getAllRelatedLeftEvents($element$)} yielding two sets of events, \textsf{leftEvents} and \textsf{rightEvents}. If the element has, at least, one event on each side, a conflict is created containing \textsf{leftEvents} and \textsf{rightEvents}. If on both sides the element is moved to the same container then the conflict is set to \textsf{PSEUDO}. The conflict is then added to \textsf{conflictList}. 
+\subsubsection{Conflict between Cross-container Moves} 
+\label{sec:move_conflict} 
+Lines 15 to 25 are dedicated to identify conflicts related to cross-container moves. 
+First, the algorithm checks if an element has been moved from its original container to another container, on one of the sides or both sides. 
+If only on one side or both sides the element has been moved to another container, 
+it continues to check the number of events related to the element by firstly obtaining change events related to the element on 
+both sides using functions \textsf{getAllRelatedLeftEvents($element$)} and \textsf{getAllRelatedLeftEvents($element$)} yielding two sets of events, 
+\textsf{leftEvents} and \textsf{rightEvents}. If the element has, at least, one event on each side,
+ a conflict is created containing \textsf{leftEvents} and \textsf{rightEvents}. 
+ If on both sides the element is moved to the same container then the conflict is set to \textsf{PSEUDO}. The conflict is then added to \textsf{conflictList}. 
 
+\subsubsection{Single-valued Feature Conflict} 
+\label{sec:single_valued_conflict}
 Similar procedure also applies to single-valued features (lines 27-39). The procedure starts by retrieving \textsf{leftValue}, \textsf{rightValue}, and \textsf{originalValue} of a single-valued feature. It then checks the inequality of \textsf{leftValue} and \textsf{rightValue} to \textsf{originalValue}. If one of \textsf{leftValue} and \textsf{rightValue} are not equal to \textsf{originalValue}, it then continues to check the number of change events related to the feature by firstly retrieving them using function \textsf{getAllRelated*Events($element$, $feature$)} (element and feature act as a map key to access the events) yielding two sets of related events, \textsf{leftEvents} and \textsf{rightEvents}. If \textsf{leftEvents} and \textsf{rightEvents} are not empty then a conflict that contains these events is instantiated. The procedure then checks the equality of \textsf{leftValue} and \textsf{rightValue} and set the conflict to \textsf{PSEUDO} if \textsf{leftValue} and \textsf{rightValue} are equal. Finally, the conflict is put into \textsf{conflictList}. 
 
 For example, when the iteration reach feature \textsf{name} of class \textsf{troll}, the algorithm retrieves the left, right, and original values of the feature, yielding ``Ogre'', ``Orc'', and ``Troll'' respectively. Since ``Ogre'' and Orc'' are not equal to ``Troll'', the algorithm continues to retrieve two sets of events related to the feature. Only one event contained exists in each set. On the left side, the event sets the name of class \textsf{troll} from ``Troll'' to ``Ogre'', while on the right side, the the event sets it from ``Troll'' to ``Orc''. Both event sets are not empty thus a conflict containing them is created. Since ``Ogre'' is not equal to ``Orc'' the conflict is not set to \textsf{PSEUDO}. This conflict is the conflict \textsf{CB1} in Table \ref{table:conflicts_cbp}. This part of the algorithm also identifies conflict \textsf{CB4} except that this conflict is set to \textsf{PSEUDO} since both sides change class \textsf{character}'s \text{name} to ``Hero''.   
 
+\subsubsection{Ordered Multi-valued Feature Conflict} 
+\label{sec:ordered_conflict}
 Conflict detection for ordered, multi-valued features (lines 41 to 53) relies on function \textsf{getUnequalLeftAndRightValues}. The function returns all values from left and right sides that are not equal to their original states in terms of (in)existence and indexes. For example, in Fig. \ref{fig:element_tree_game}, parameter \textsf{target} in feature \textsf{parameters} is at index 2 on the left side but at index 1 in its original state. Thus, the value is included in the returned set. On the right side, this parameter is also at different index to its original index but it is already included the returned set. 
 
 The algorithm then iterates through the values of the set. For each value, it retrieves all events related to the value on this feature (element, feature, and value act as a map key to access the events) using function \textsf{getAllRelated*Events($element$, $feature$, $value$)} yielding two sets of events, \textsf{leftEvents} and \textsf{rightEvents}. If both sets of events are not empty then a conflict is created. If the value on both sides is at the same index then the conflict is \textsf{PSEUDO}. Lastly, the conflict is added to \textsf{conflictList}. The parameter \textsf{target} in feature \textsf{parameters} has been concurrently modified; it has one event on each side: parameter \textsf{target} is moved to the last index on the left side and to the first index on the right. Thus, a conflict in detected. This conflict is presented as conflict \textsf{CB2} in Table \ref{table:conflicts_cbp}.
 
 Another example to understand how \textsf{getUnequalLeftAndRightValues} works is the feature \textsf{operations} in the element tree in Fig. \ref{fig:right_element_tree_diagram}. Let's assume that this feature is unordered and multi-valued. On the left side, elements that are different from their original states are \textsf{d} (added as a new element) and \textsf{b} (removed from the feature) while, on the right side, the different elements are \textsf{a} (moved to the last index) and \textsf{b} (shifted since \textsf{a} is moved). Thus, the value set returned by \textsf{getUnequalLeftAndRightValues} contains all these elements. However, none of these elements have been modified concurrently on both sides -- their change events only exist on one side. Therefore, there is no conflict is detected. 
 
+\paragraph{Unordered Multi-valued Feature Conflict} 
+\label{sec:unordered_conflict}
 Conflict detection for un-odered, multi-valued features is handled at lines 54 to 67. Instead of using function \textsf{getUnequalLeftAndRightValues}, it employs function \textsf{getXORLeftAndRightValues}. The function also returns all values from left and right sides that are not equal to their original states but only in terms of (in)existence since indexing is not considered in un-ordered features. The procedure to detect a conflict is similar to the procedure for ordered features except that it check the existence of values (function \textsf{isExisted}) to determine if a conflict is \textsf{PSEUDO} or not.
 
 \begin{figure*}
@@ -1358,7 +1400,11 @@ Figures \ref{fig:operation_time_events} and \ref{fig:operation_memory_events} ex
     \label{fig:conflict_events}
 \end{figure*}
 
-This section presents the results of the conflict detection evaluation. Similar to the results in the model differencing evaluation (Fig. \ref{fig:modification_course}), the growing number of change events in the conflict detection evaluation is also followed by the logarithmic increase of affected elements (Fig. \ref{fig:conflict-size-events}). The total number of both elements can also be kept relatively constant due to 1:1 ratio of \textsf{add} and \textsf{delete} operations' occurrence. These change events produce different numbers of conflicts for Epsilon CBP, EMF Compare, and EMF Store as can be seen in Fig. \ref{fig:conflict-count-events}. However, the numbers of conflicts detected are slightly different due to their distinct conflict detection approaches. 
+This section presents the results of the conflict detection evaluation. 
+
+\subsubsection{Mixed Operations}
+\label{sec:mixed-operation_conflict}
+Similar to the results in the model differencing evaluation (Fig. \ref{fig:modification_course}), the growing number of change events in the conflict detection evaluation is also followed by the logarithmic increase of affected elements (Fig. \ref{fig:conflict-size-events}). The total number of both elements can also be kept relatively constant due to 1:1 ratio of \textsf{add} and \textsf{delete} operations' occurrence. These change events produce different numbers of conflicts for Epsilon CBP, EMF Compare, and EMF Store as can be seen in Fig. \ref{fig:conflict-count-events}. However, the numbers of conflicts detected are slightly different due to their distinct conflict detection approaches. 
 
 Fig. \ref{fig:conflict-time-events} exhibits Epsilon CBP outperforms EMF Compare and EMF Store in terms of execution time in detecting conflicts. In a comparison of two models that involves 1.01 million elements in total and 1.3 millions change events (the last measurement point), Epsilon CBP takes only 6.7 seconds to detect all conflicts while EMF Compare requires 21.4 seconds to finish the conflict detection. Both conflict detections are faster than EMF Store that needs 1 minute and 34.6 seconds to complete detecting conflicts. Fig. \ref{fig:conflict-memory-events} also shows Epsilon CBP outmatches EMF Compare and EMF Store in terms of memory footprint in conflict detection. At the last measurement point, Epsilon CBP only consumes 5 GBs which is much lesser than EMF Compare and EMF Store that occupy around 16 and 26 GBs of memory footprint respectively.
 
@@ -1410,6 +1456,96 @@ In terms of memory footprint, Epsilon CBP allocates most of the memory space for
     \end{subfigure}
     \caption{Detailed view of Epsilon CBP vs. EMF Compare vs. EMF Store on the memory footprint for conflict detection.}
     \label{fig:conflict_memory_events}
+\end{figure*}
+
+\subsubsection{Homogenous Operations}
+\label{sec:homogenous-operation_conflict}
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{add-conflict-time-events}
+        \caption{add-only}
+        \label{fig:add-conflict-time-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{delete-conflict-time-events}
+        \caption{delete-only}
+        \label{fig:delete-conflict-time-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{move-conflict-time-events}
+        \caption{move-only}
+        \label{fig:move-conflict-time-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{change-conflict-time-events}
+        \caption{change-only}
+        \label{fig:change-conflict-time-events}
+    \end{subfigure}
+    \caption{Conflict detection time for homogeneous operations.}
+    \label{fig:homgeneous_operation_time_events}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{add-conflict-memory-events}
+        \caption{add-only}
+        \label{fig:add-conflict-memory-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{delete-conflict-memory-events}
+        \caption{delete-only}
+        \label{fig:delete-conflict-memory-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{move-conflict-memory-events}
+        \caption{move-only}
+        \label{fig:move-conflict-memory-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{change-conflict-memory-events}
+        \caption{change-only}
+        \label{fig:change-conflict-memory-events}
+    \end{subfigure}
+    \caption{Conflict detection memory for homogeneous operations.}
+    \label{fig:homgeneous_operation_memory_events}
+\end{figure*}
+
+\begin{figure*}[ht]
+    \centering
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{add-conflict-count-events}
+        \caption{add-only}
+        \label{fig:add-conflict-count-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{delete-conflict-count-events}
+        \caption{delete-only}
+        \label{fig:delete-conflict-count-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{move-conflict-count-events}
+        \caption{move-only}
+        \label{fig:move-conflict-count-events}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[t]{0.245\linewidth}
+        \includegraphics[width=\linewidth]{change-conflict-count-events}
+        \caption{change-only}
+        \label{fig:change-conflict-count-events}
+    \end{subfigure}
+    \caption{Conflict detection count for homogeneous operations.}
+    \label{fig:homgeneous_operation_count_events}
 \end{figure*}
 
 Based on the findings in model differencing and conflict detection evaluation, we argue that the change-based comparison approach works at its best for large models that have been modified a moderate number of times. Models that have been excessively modified and experience significant reduction on model size could impair the performance of change-based comparison as a great number of change records have to be read and loaded into memory. 
