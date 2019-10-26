@@ -913,6 +913,46 @@ As in EMF Compare, we also implement pseudo conflict. Pseudo conflict is a confl
 \end{equation} 
 
 
+\begin{figure}
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includegraphics[width=\linewidth]{statechart_01}
+            \caption{no-conflict}
+            \label{fig:statechart_01}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includegraphics[width=\linewidth]{statechart_02}
+            \caption{no-conflict}
+            \label{fig:statechart_02}
+        \end{subfigure}
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includegraphics[width=\linewidth]{statechart_03}
+            \caption{no-conflict}
+            \label{fig:statechart_03}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includegraphics[width=\linewidth]{statechart_04}
+            \caption{conflict}
+            \label{fig:statechart_04}
+        \end{subfigure}
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includegraphics[width=\linewidth]{statechart_05}
+            \caption{pseudo-conflict}
+            \label{fig:statechart_05}
+        \end{subfigure}
+        \hfill
+        \begin{subfigure}[t]{0.49\linewidth}
+            \includegraphics[width=\linewidth]{statechart_06}
+            \caption{conflict}
+            \label{fig:statechart_06}
+        \end{subfigure}
+    \caption{Conflicting and non-conflicting changes.}
+    \label{fig:conflict_states}
+\end{figure}
+
+
+
 
 %Since only the last operation applied to an element that determines the element's eventual state, we can infer that the last operations $e_{ln}$ in $O_{L}$ and $e_{rm}$  in $O_{R}$, where $n$ = $|O_{L}|$ and $m$ = $|O_{R}|$, are the operations that are definitely in conflict. 
 %\begin{equation} \label{eq:conflict_3.11}
@@ -1079,9 +1119,14 @@ Conflict detection for ordered, multi-valued features (lines 41 to 53) relies on
 
 The algorithm then iterates through the values of the set. For each value, it retrieves all events related to the value on this feature (element, feature, and value act as a map key to access the events) using function \textsf{getAllRelated*Events($element$, $feature$, $value$)} yielding two sets of events, \textsf{leftEvents} and \textsf{rightEvents}. If both sets of events are not empty then a conflict is created. If the value on both sides is at the same index then the conflict is \textsf{PSEUDO}. Lastly, the conflict is added to \textsf{conflictList}. The parameter \textsf{target} in feature \textsf{parameters} has been concurrently modified; it has one event on each side: parameter \textsf{target} is moved to the last index on the left side and to the first index on the right. Thus, a conflict in detected. This conflict is presented as conflict \textsf{CB2} in Table \ref{table:conflicts_cbp}.
 
-Another example to understand how \textsf{getUnequalLeftAndRightValues} works is the feature \textsf{operations} in the element tree in Fig. \ref{fig:right_element_tree_diagram}. Let's assume that this feature is unordered and multi-valued. On the left side, elements that are different from their original states are \textsf{d} (added as a new element) and \textsf{b} (removed from the feature) while, on the right side, the different elements are \textsf{a} (moved to the last index) and \textsf{b} (shifted since \textsf{a} is moved). Thus, the value set returned by \textsf{getUnequalLeftAndRightValues} contains all these elements. However, none of these elements have been modified concurrently on both sides -- their change events only exist on one side. Therefore, there is no conflict is detected. 
 
-\paragraph{Unordered Multi-valued Feature Conflict} 
+\begin{figure}
+    \includegraphics[width=\linewidth]{multi_valued_conflict_detection}
+    \caption{Detecting conflicts in Multi-valued features ($D$: values that are different at every index; $X$: XOR of values).}
+    \label{fig:multi_valued_conflict_detection}
+\end{figure}
+
+\subsubsection{Unordered Multi-valued Feature Conflict} 
 \label{sec:unordered_conflict}
 Conflict detection for un-odered, multi-valued features is handled at lines 54 to 67. Instead of using function \textsf{getUnequalLeftAndRightValues}, it employs function \textsf{getXORLeftAndRightValues}. The function also returns all values from left and right sides that are not equal to their original states but only in terms of (in)existence since indexing is not considered in un-ordered features. The procedure to detect a conflict is similar to the procedure for ordered features except that it check the existence of values (function \textsf{isExisted}) to determine if a conflict is \textsf{PSEUDO} or not.
 
