@@ -195,7 +195,7 @@ In the context of Model-Driven Engineering, most of the models are persisted in 
 
 As an alternative to state-based persistence, a model can also be persisted in a change-based format, which persists the full sequence of \emph{changes} made to the model instead. The concept of change-based persistence is not new and has been used in persisting changes to software, object-oriented databases, and hierarchical documents \cite{DBLP:journals/entcs/RobbesL07,DBLP:conf/sde/LippeO92,DBLP:conf/caise/IgnatN05}. The change-based approach can improve detecting differences more precisely at the semantic level, that is by providing finer-granularity information (e.g. types of changes, the order of the changes, 
 elements that were changed, previous values, etc.) and therefore provide support to resolve them \cite{mens2002state}. The ordered nature of change-based persistence also means that changes made to a model since its previous version can be identified sequentially without having to inspect every element of the model and compare the model to its previous version. 
-Based on these arguments, This work aims to answer the following research question, \textbf{``How and to what extent does change-based model persistence speed up model conflict detection with less side-effect on memory footprint compared to state-based model conflict detection?''} This work has built an implementation of change-based persistence for models conforming to 3-layer metamodelling architectures such as EMF and MOF, and has been using it to speed up model conflict detection. The implementation of the change-based model persistence, the approach that leverages it to speed up model conflict detection as well as its evaluation are presented in this paper. 
+In terms of performance, our previous study \cite{yohannis2019efficient} has found that using change-based approach, we can perform model differencing faster than its state-based counterpart. Since state-based conflict detection also employs state-based model differencing to derive changes of models, we can expect that change-based approach can also performs better than state-based approach in detecting conflicts. Based on these arguments, This work aims to answer the following research question, \textbf{``How and to what extent does change-based model persistence speed up model conflict detection with less side-effect on memory footprint compared to state-based model conflict detection?''} This work has built an implementation of change-based persistence for models conforming to 3-layer metamodelling architectures such as EMF and MOF, and has been using it to speed up model conflict detection. The implementation of the change-based model persistence, the approach that leverages it to speed up model conflict detection as well as its evaluation are presented in this paper. 
 
 \begin{figure*}[t]
   \centering
@@ -532,6 +532,7 @@ For the fast-growing model files challenge, persisting models in a change-based 
 
 \section{Existing Conflict Detections in Models}
 \label{sec:existing_conflict_detections}
+In this section, we discuss two existing model conflict detection approaches. First, we describe the state-based conflict detection applied in EMF Compare \cite{emfcompare2018developer}, and, second, we explain the existing change-based conflict detection performed by EMF Store \cite{emfstore2019what,koegel2010operation}. Both are used as baselines in our evaluation.
 
 \begin{table*}[ht]
   \centering
@@ -824,19 +825,26 @@ Conflict ES4 is a non-applicability, composite conflict. Moving element \textsf{
   \end{tabular}
 \end{table*}
 
+\subsection{Summary}
+\label{sec:summary}
 The summary of the advantages and drawbacks between EMF Compare and EMF Store in detecting conflicts are presented in Table \ref{tab:accuracy_emfcompare_emfstore}. The state-based approach, represented by EMF Compare \cite{emfcompare2018developer}, does come with drawbacks. First, it cannot detect conflicts as accurate as change-based approach can as their changes are derived -- not the real historical changes. Second, EMF Compare uses 3-way model comparison \cite{emfcompare2018developer} thus hypothetically its conflict detection should perform relatively slower than the change-based approach, since it has to perform state-based model differencing twice to derive changes events: changes events between left and original versions, and change events between right and original versions. 
 
-Change-based model conflict detection \cite{koegel2010operation}, represented by EMF Store \cite{emfstore2019what}, also has drawbacks. EMF Store purely works on comparing change events and detects conflicts based on predefined rules; it does not consider the eventual states of two versions that are being compared. Thus, two change events that modifies a same feature are considered in conflict even though both change events produce the same eventual states. This condition can lead EMF Store to oversensitive conflict detection. In terms of performance, as has been investigated in \cite{yohannis2019efficient}, the change-based approach is faster than its state-based counterparts in model differencing. Thus, it is expected that it can also performs better that the state-based approach in detecting conflicts.
+Change-based model conflict detection \cite{koegel2010operation}, represented by EMF Store \cite{emfstore2019what}, also has drawbacks. EMF Store purely works on comparing change events and detects conflicts based on predefined rules; it does not consider the eventual states of two versions that are being compared. Thus, two change events that modifies a same feature are considered in conflict even though both change events produce the same eventual states. This condition can lead EMF Store to oversensitive conflict detection. 
 
 \section{EMF CBP Conflict Detection}
 \label{sec:emf_cbp_conflict_detection}
-This work proposes a change-based model conflict detection that also considers the eventual states of modified elements. Thus, the performance and accuracy of model conflict detection can be improved, compared to state-based approach, without being oversensitive.
+This work proposes a change-based model conflict detection that also considers the eventual states of modified elements. Thus, the performance and accuracy of model conflict detection can be improved -- compared to state-based conflict detection -- without being oversensitive -- as opposed to the change-based conflict detection of EMF Store.
 
-Compared to the state-based model differencing of EMF Compare, the change-based model proposed in this work consists of three phases: event loading, element tree construction, and diff computation.
-The comparison is not performed over all the elements of the model as opposed to state-based model differencing; instead, the approach only needs to compare the last set of changes from the source and reference model.
-The last set of changes can be identified easily by finding their last common change. A simplified class diagram of the approach's implementation \cite{epsilonlabs2019emfcbp} is depicted in Figure \ref{fig:approach_class_diagram}. The three phases are described in detail in the following Sections.
+Compared to the state-based model conflict detection of EMF Compare, the change-based model conflict detection proposed in this work consists of three phases: event loading, element tree construction, and conflict computation.
+The conflict detection is not performed over all the elements of the model as opposed to state-based model differencing; instead, the approach only needs to compare the last sets of change events of the two models being compared, starting from the lines of both models are different. A simplified class diagram of the approach's implementation \cite{epsilonlabs2019emfcbp} is depicted in Figure \ref{fig:approach_class_diagram}. The three phases are described in detail in the following Sections.
 
-The model conflict detection proposed in this study basically performs similar procedure to the phases of change-based model differencing discussed in Chapter \ref{sec:change_based_approach_for_comparing_models} except that (1) it only executes event loading and element tree construction phases and replaces diff computation phase with conflict computation phase, and (2) during element tree construction, it maps change events to the elements, features, and values that they modify. The change event mapping and conflict computation are discussed in the following Sections.
+\begin{figure*}
+  \includegraphics[width=\linewidth]{TreeClassDiagram}
+  \caption{A class diagram showing the core components of the change-based approach to speed up model differencing and conflict detection.}
+  \label{fig:approach_class_diagram}
+\end{figure*}
+
+The model conflict detection proposed in this study basically performs similar steps to the procedure of change-based model differencing in our previous work \cite{yohannis2019efficient} but with some modification. The change-based model differencing itself consists of three phases: event loading, element three construction, and diff computation. First, the conflict detection still performs the event loading and element tree construction phases, but the diff computation phase is replaced with conflict computation phase. Second, during element tree construction, the conflict detection maps change events to the elements, features, and values that the change events modify. 
 
 \subsection{Event Loading}
 \label{sec:event_loading}
@@ -850,12 +858,6 @@ In this case, lines 1-29 in Listing \ref{lst:cbp_origin} are skipped. Only lines
 An element tree is a representation of the changes of model elements in the source and reference models. It contains detailed information about elements and their properties. It contains similar information to that captured in change lists in state-based model persistence, but also provides more information about the changes. For example, the element tree can keep track of a feature's old value and element/value's indexes inside multi-valued properties. The element tree only contains the partial states of affected elements of the original, left, and right models as depicted in Figures \ref{fig:left_element_tree_diagram} and \ref{fig:right_element_tree_diagram}.
 
 To better understand the construction of an element tree from change events, we use the following running example using both change events in the Listings \ref{lst:cbp_left} and \ref{lst:cbp_right}. We start from the left change events. 
-
-\begin{figure*}
-  \includegraphics[width=\linewidth]{TreeClassDiagram}
-  \caption{A class diagram showing the core components of the change-based approach to speed up model differencing and conflict detection.}
-  \label{fig:approach_class_diagram}
-\end{figure*}
 
 \subsubsection{Left Side}\label{sec:left_side}
 In the first change event in Listing \ref{lst:cbp_left} at line \ref{line:cbp_left_30}, the change event is a \textsf{session} event. It marks that the all the following change events until the final line or next \textsf{session} event are persisted in one batch when saving. At line \ref{line:cbp_left_31}, we can identify that Bob created a \textsf{Generalization} with id \textsf{leftGen}. Thus, in \textsf{elementTree}, an element with id \textsf{leftGen} is also created. To mark that an element is newly created in the session, we put a '+' sign at the left lower box of element \textsf{leftGen} in Figure \ref{fig:left_element_tree_diagram}.
@@ -926,8 +928,7 @@ Algorithm \ref{alg:element_tree} describes the steps presented in Figure \ref{fi
 For each \textsf{event} in the \textsf{events}, we collect information needed to build up \textsf{elementTree}  (lines 3-9), such as \textsf{targetElement}, \textsf{feature}, \textsf{value}, \textsf{previousValue}, \textsf{index}, and \textsf{previousIndex}. The \textsf{targetElement} is the element modified by a change event (e.g., \textsf{character} and \textsf{giant} in Listing \ref{lst:cbp_left}). This \textsf{targetElement} -- an instance of class Element in Figure \ref{fig:approach_class_diagram} -- is retrieved from the \textsf{elementTree} if it already exists. Otherwise, a new element is created and added to the \textsf{elementTree} (line 3). In this step we also set the flags \textsf{*IsCreated} and \textsf{*IsDeleted} of the element in Figure \ref{fig:approach_class_diagram}. For example, if the type of the event is \textsf{create} then \textsf{*IsCreated} is set to \textsf{true}. The \textsf{feature} -- an instance of class Feature in Figure \ref{fig:approach_class_diagram} -- represents the target element's feature (e.g., \textsf{name} and \textsf{operations} in Listing \ref{lst:cbp_right}) modified by a change event. It is retrieved from the \textsf{targetElement}'s feature list, and a new one is created and added to the \textsf{targetElement}'s feature list if the feature does exist (line 5). 
 
 \IncMargin{1.5em}
-\begin{algorithm}[]
-  \begin{footnotesize}
+\begin{algorithm*}[]
     \SetKwInOut{Input}{input} 
     \SetKwInOut{Output}{output}
     \Input{a list of ChangeEvent $events$}
@@ -963,10 +964,9 @@ For each \textsf{event} in the \textsf{events}, we collect information needed to
       }
       \Return{$elementTree$}\;
     }
-  \end{footnotesize}
   \caption{Algorithm to construct an element tree from events.}
   \label{alg:element_tree}
-\end{algorithm}
+\end{algorithm*}
 \DecMargin{1.5em}
 
 The \textsf{value} is the value assigned to the feature in a change event (line 5, Algorithm \ref{alg:element_tree}). The \textsf{value} can be the type of \textsf{Element} (e.g., element \textsf{leftGen} line \ref{line:cbp_left_36} in Listing \ref{lst:cbp_left}) or primitive (e.g., the string ``Hero'' at line \ref{line:cbp_left_34} in the Listing \ref{lst:cbp_left}). The \textsf{previousValue} represents the previous value of the modified feature (line 6, Algorithm \ref{alg:element_tree}). The \textsf{previousValue} is not defined if no previous value has been assigned. For \textsf{value} and \textsf{previousValue} with type \textsf{Element}, the elements that they represent are retrieved from the \textsf{elementTree}, and if they do not exist, new instances are created. If the type is primitive, the value is treated as it is. Not every change event has a \textsf{value}, particularly events with type \textsf{create} 
@@ -976,7 +976,7 @@ The \textsf{index} is the index assigned by a change event to a value in a featu
 
 At line 9, we retrieve the \textsf{featureEventList} from the \textsf{feature} to be added later with the current \textsf{event} (line 19). The \textsf{featureEventList} is a list -- a history -- of change events that have been processed that are specific to the \textsf{feature} on the selected \textsf{side}. Using the obtained \textsf{targetElement}, \textsf{feature}, \textsf{value}, and \textsf{index}, the process then updates the state of the \textsf{elementTree} on the selected \textsf{side} (line 10). After that, it calculates back the original index of a value using the \textsf{featureEventList} and \textsf{previousIndex} (line 11). If the value at \textsf{oldIndex} in the \textsf{feature} has not been set, then the algorithm sets the \textsf{feature} with the \textsf{previousValue} at the \textsf{oldIndex} in the partial state of the original model (lines 12-13). At lines 14-18, the algorithm also does the same thing to the opposite side -- if the current \textsf{side} is \textsf{left} then it is \textsf{right}. 
 
-\subsection{Change Event Mapping}
+\subsubsection{Change Event Mapping}
 \label{sec:change_event_mapping}
 Using the information contained in change-based model persistence in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left}, we can construct an element tree as depicted in Figure \ref{fig:right_element_tree_diagram} using the construction method presented in Section \ref{sec:tree_construction}. During the the construction, change events in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} are mapped to the affected elements, features, and values which act as the keys of the mapping. The relationships are stored in attributes \textsf{leftEvents} and \textsf{rightEvents} of class \textsf{Element} and \textsf{leftEvents}, \textsf{rightEvents}, \textsf{leftValueEvents}, and \textsf{rightValueEvents} of class \textsf{Feature} in Figure \ref{fig:approach_class_diagram}. This registration forms many-to-many relationships between the keys and change events. In detail, the keys are \textsf{element} for elements, or a combination of \textsf{element-feature} for single-valued features or \textsf{element-feature-value} for multivalued-features. With this mapping, we can trace all events that affects certain elements, features, and values. The mapping of the events in Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} is in Table \ref{tab:keyeventsmap}. The application of this mapping is presented in Section \ref{sec:delete_conflict}.
 
@@ -984,9 +984,8 @@ Using the information contained in change-based model persistence in Listings \r
   \centering
   \caption{The mapping of elements, features, and values in Figure \ref{fig:right_element_tree_diagram} to the events that affect them.}
   \label{tab:keyeventsmap}
-  \begin{scriptsize}
     \begin{sffamily}
-      \begin{tabular}{|m{0.31\linewidth}|m{0.27\linewidth}|m{0.27\linewidth}|}
+      \begin{tabular}{|m{0.36\linewidth}|m{0.245\linewidth}|m{0.245\linewidth}|}
         \hline
         \textbf{Key} & \textbf{Left Events} & \textbf{Right Events} \\ \hline
         character                          & cl32, cl34                                & cr37, cr39                                 \\ \hline
@@ -1017,10 +1016,13 @@ Using the information contained in change-based model persistence in Listings \r
       \end{tabular}\\
     \end{sffamily}
     c: change event; l: left side; r: right side; n: line number in change-based model persistence
-  \end{scriptsize}
 \end{table}
 
-\subsection{Theoretical Foundation} 
+\subsection{Conflict Computation} 
+\label{sec:conflict_computation} 
+This section explain how the information contained in the \textsf{elementTree} is used to detect conflicts between change events of two versions of a model. First, we discuss the theoretical foundation of the conflict detection. After that, we explain detecting conflicts related to deletion of an element, cross-containment movement, singe-valued feature, and ordered/unordered multi-valued feature. 
+
+\subsubsection{Theoretical Foundation} 
 \label{sec:theoretical_foundation}
 In the proposed conflict detection, we take two strategies from both change and state-based conflict detections to improve the accuracy of our approach. 
 First, we exploit change events to accurately address real historical changes -- not derived ones -- of models. Second, we also take into account the original and eventual states of the modified models. Two sequences of change events that produce two eventual states that are equal to an original state are not treated as in conflict. The original and eventual states are already calculated during the construction of the \textsf{element tree} so that we do not to calculate them again in the conflict computation phases. Since all change events are also recorded to every element, feature, and value that they affected, we can retrieve all related change events that produce the eventual state of an element or feature. 
@@ -1097,19 +1099,15 @@ Figure \ref{fig:conflict_states} are some examples how conflict and non-conflict
   \label{fig:conflict_states}
 \end{figure}
 
-Using (\ref{eq:ecbp_pseudoconflict}), condition in Figure \ref{fig:statechart_04} can be detected as a \textsf{PSEUDO} conflict. \textsf{PSEUDO} conflict means that a conflict can be automatically resolved. This means that we can automatically select one of the two conflicting change event sets as the applied change events without needing for human intervention. Since $C_{R}$ produces the eventual state that is equal to the original state, that is `a'; it does not have any effect -- the changes are not intended or cancelled. Thus, all its change events can be automatically negated. In other words, only change events in $C_{L}$ that are accepted to produce the eventual state, which is `e'. Also using (\ref{eq:ecbp_pseudoconflict}), condition is \ref{fig:statechart_05} can also be detected as another \textsf{PSEUDO} conflict. Both change event sets, $C_{L}$ and $C_{R}$, produce the same eventual state, `e', that is different from the original state, `a'. This condition ca be automatically resolved since selecting one of the sets produces the same outcome. With (\ref{eq:ecbp_conflict}), the condition in Figure \ref{fig:statechart_06} can be detected as a \textsf{REAL} conflict since change event sets, $C_{L}$ and $C_{R}$, produces two different eventual states. The conflict cannot be automatically resolved and requires user intervention to choose which one is the desired eventual state, `e' or `f', and then the appropriate change event set should be selected to produce the eventual state.
+Using (\ref{eq:ecbp_pseudoconflict}), condition in Figure \ref{fig:statechart_04} can be detected as a \textsf{PSEUDO} conflict. \textsf{PSEUDO} conflict means that a conflict can be automatically resolved. This means that we can automatically select one of the two conflicting change event sets as the applied change events without needing for human intervention. Since $C_{R}$ produces the eventual state that is equal to the original state, that is `a'; it does not have any effect -- the changes are not intended or cancelled. Thus, all its change events can be automatically negated. In other words, only change events in $C_{L}$ that are accepted to produce the eventual state, which is `e'. Also using (\ref{eq:ecbp_pseudoconflict}), condition is \ref{fig:statechart_05} can also be detected as another \textsf{PSEUDO} conflict. Both change event sets, $C_{L}$ and $C_{R}$, produce the same eventual state, `e', that is different from the original state, `a'. This condition ca be automatically resolved since selecting one of the sets produces the same outcome. With (\ref{eq:ecbp_conflict}), the condition in Figure \ref{fig:statechart_06} can be detected as a \textsf{REAL} conflict since change event sets, $C_{L}$ and $C_{R}$, produces two different eventual states. The conflict cannot be automatically resolved and requires user intervention to choose which one is the desired eventual state, `e' or `f', and then the appro
 
-
-\subsection{Conflict Computation} 
-\label{sec:conflict_computation} 
 We perform procedure in Algorithm \ref{alg:conflict_detection} and employ (\ref{eq:ecbp_conflict}) and (\ref{eq:ecbp_pseudoconflict}) inside it to identify conflicts between two CBPs. Basically, the algorithm works by iterating through all the elements, features, and values in the element three (Figure \ref{fig:right_element_tree_diagram}) and checking the equivalency of their original and eventual states as well the numbers of change events applied to them. The results are then used as inputs to decide whether a conflict has been detected or not.
 
 \begin{table*}[ht]
   \centering
   \caption{Conflicting change events in Listings \ref{lst:cbp_left} and \ref{lst:cbp_right} identified using the proposed change-based conflict detection. The bold identifiers are the keys where the conflicts detected.}
   \label{table:conflicts_cbp}
-  \begin{scriptsize}
-    \begin{tabular}{|p{0.06\linewidth}|p{0.375\linewidth}|p{0.375\linewidth}|
+    \begin{tabular}{|p{0.04\linewidth}|p{0.4\linewidth}|p{0.4\linewidth}|
         p{0.06\linewidth}|}
       \hline
       \textbf{ID} & 
@@ -1182,7 +1180,6 @@ We perform procedure in Algorithm \ref{alg:conflict_detection} and employ (\ref{
       pseudo\\ 
       \hline
     \end{tabular}
-  \end{scriptsize}
 \end{table*}
 
 %------------------------------------------------------------------------------
@@ -1193,15 +1190,13 @@ The algorithm starts by creating a empty list \textsf{conflictList} to contain i
 \label{sec:delete_conflict} 
 At lines 4 to 11 in Algorithm \ref{alg:conflict_detection}, the algorithm checks if there is a conflict related to a deletion of an element.
 If an element is deleted on one side or both sides, it means that all events related to the element on both sides should be in conflict. 
-To get all the related events, the algorithm use functions \textsf{getAllRelatedLeftEvents($element$)} 
-and \textsf{getAllRelatedLeftEvents($element$)} (the element acts as a map key to access the change events) that return two sets of the related events, 
+To get all the related events, the algorithm use two functions,  \textsf{getAllRelatedLeftEvents($element$)} and \textsf{getAllRelatedRightEvents($element$)} (the element acts as a map key to access the change events), that return two sets of the related events, 
 \textsf{leftEvents} and \textsf{rightEvents} respectively. The related events are events applied to the deleted element, including its sub-elements and features, 
 and events that are parts of composite events. If both sets of events are not empty then a conflict is created containing both sets of events. 
 If the element is deleted on both sides then we set the conflict as \textsf{PSEUDO}. The identified conflict is then added to \textsf{conflictList}.
 
 \IncMargin{1.5em}
-\begin{algorithm}[]
-  \begin{scriptsize}
+\begin{algorithm*}[]
     \SetKwInOut{Input}{input}
     \SetKwInOut{Output}{output}
     \Input{an instance of ElementTree $elementTree$}
@@ -1243,10 +1238,9 @@ If the element is deleted on both sides then we set the conflict as \textsf{PSEU
       }
       \Return{$conflictList$}\;
     }
-  \end{scriptsize}
   \caption{Algorithm for conflict detection using element tree.}
   \label{alg:conflict_detection}
-\end{algorithm}
+\end{algorithm*}
 \DecMargin{1.5em}
 
 As an example, when the iteration reach element \textsf{giant} in Figure \ref{fig:right_element_tree_diagram}, the algorithm identifies that the element has been deleted only on the left side.
@@ -1265,7 +1259,7 @@ When the iteration reach element \textsf{cast} -- the operation of class \textsf
 
 It can be noticed that both conflicts \textsf{CB3} and \textsf{CB4} have shared change events. Thus these conflicts have a dependency to each other. It means that if a user chooses to delete \textsf{giant} -- choose the left side as the solution -- for conflict \textsf{CB3}, the left side change events also have to be selected as the solution for conflict \textsf{CB4} for consistency. To facilitate computing such dependency, conflicts and change events are designed to have many-to-many relationships as depicted in Figure \ref{fig:approach_class_diagram}. Thus, if a change event is associated with two or more conflicts, it means that they depend to each others.
 
-It is important to notice that at line 13 in Figure \ref{alg:conflict_detection} there is a command \textsf{continue} after the addition of a conflict caused by deletion. The command skips the iteration to the next element which avoids unnecessary conflict computation for the current element's  features and values. All change events related to the features and values have been collected by the functions \textsf{getAllRelated*Events($element$)} at lines 5 and 6.  
+It is important to notice that at line 13 in Figure \ref{alg:conflict_detection} there is a command \textsf{continue} after the addition of a conflict caused by deletion. The command skips the iteration to the next element which avoids unnecessary conflict computation for the current element's  features and values. All change events related to the features and values have been collected by the functions \textsf{getAllRelatedLeftEvents($element$)} and \textsf{getAllRelatedRightEvents($element$)} at lines 5 and 6.  
 
 \subsubsection{Conflict between Cross-container Moves} 
 \label{sec:move_conflict} 
@@ -1279,8 +1273,7 @@ a conflict is created containing \textsf{leftEvents} and \textsf{rightEvents}.
 If on both sides the element is moved to a same container or the element is moved but finally returns to its original container on one of its sides then the conflict is set to \textsf{PSEUDO}. The conflict is then added to \textsf{conflictList}. 
 
 \IncMargin{1.5em}
-\begin{algorithm}[]
-  \begin{scriptsize}
+\begin{algorithm*}[]
     \SetKwInOut{Input}{input}
     \SetKwInOut{Output}{output}
     \Input{an element $element$}
@@ -1303,10 +1296,9 @@ If on both sides the element is moved to a same container or the element is move
         }
       }
     }
-  \end{scriptsize}
   \caption{Algorithm to handle single-valued feature in conflict detection using element tree -- handleSingleValuedFeature($element$, $feature$, $conflictList$) at line 27 in Algorithm \ref{alg:conflict_detection}.}
   \label{alg:conflict_single_valued_feature}
-\end{algorithm}
+\end{algorithm*}
 \DecMargin{1.5em}
 
 \subsubsection{Single-valued Feature Conflict} 
@@ -1320,8 +1312,7 @@ For example, when the iteration reach feature \textsf{name} of class \textsf{tro
 Conflicts that involve multi-valued features are handled by the procedure at line \ref{line:conflict_multi_value} in Algorithm \ref{alg:conflict_detection}, which is elaborated in Algorithm \ref{alg:conflict_multi_valued_feature}, where ordered multi-valued features are addressed at lines 3-15. The procedure relies on function \textsf{getUnequalLeftAndRightValues}. The function returns all values from left and right sides that are not equal to their original states in terms of (in)existence and indexes. For example, in Figure \ref{fig:right_element_tree_diagram}, parameter \textsf{target} in feature \textsf{parameters} is at index 2 on the left side but at index 1 in its original state. Thus, the value is included in the returned set. On the right side, this parameter is also at different index to its original index but it is already included the returned set. 
 
 \IncMargin{1.5em}
-\begin{algorithm}[]
-  \begin{scriptsize}
+\begin{algorithm*}[]
     \SetKwInOut{Input}{input}
     \SetKwInOut{Output}{output}
     \Input{an element $element$}
@@ -1361,10 +1352,9 @@ Conflicts that involve multi-valued features are handled by the procedure at lin
         }
       }
     }
-  \end{scriptsize}
   \caption{Algorithm to handle multi-valued feature in conflict detection using element tree -- handleMultiValuedFeature($element$, $feature$, $conflictList$) at line 28 in Algorithm \ref{alg:conflict_detection}.}
   \label{alg:conflict_multi_valued_feature}
-\end{algorithm}
+\end{algorithm*}
 \DecMargin{1.5em}
 
 The algorithm then iterates through the values of the set. For each value, it retrieves all events related to the value on this feature (element, feature, and value act as a map key to access the events) using functions \textsf{getAllRelated *Events($element$, $feature$, $value$)}, yielding two sets of events, \textsf{leftEvents} and \textsf{rightEvents}. If both sets of events are not empty then a conflict is created. If the value on both sides is at the same index then the conflict is \textsf{PSEUDO}. Lastly, the conflict is added to \textsf{conflictList}. The parameter \textsf{target} in feature \textsf{parameters} has been concurrently modified; it has one event on each side: parameter \textsf{target} is moved to the last index on the left side and to the first index on the right. Thus, a conflict in detected. This conflict is presented as conflict \textsf{CB2} in Table \ref{table:conflicts_cbp}.
@@ -1379,127 +1369,12 @@ The algorithm then iterates through the values of the set. For each value, it re
 \label{sec:unordered_conflict}
 Conflict detection for unordered, multi-valued features is handled at lines 16 to 29 in Algorithm \ref{alg:conflict_multi_valued_feature}. Instead of using function \textsf{getUnequalLeftAndRightValues}, it employs functions \textsf{getXOR*AndOriginalValues}. The functions also returns all values from left and right sides that are not equal to their original states but only in terms of (in)existence since indexing is not important in un-ordered features. The procedure to detect a conflict is similar to the procedure for ordered features. The difference is that, to determine if a conflict is \textsf{PSEUDO} or not, it checks the existence of values using functions \textsf{is*Existed}.
 
-%\begin{figure*}
-%    \begin{tabular}{l|c|r}
-%        \begin{subfigure}[t]{0.31\linewidth}
-%            \includegraphics[width=\linewidth]{class_diagram_merged_ecbp}
-%            \caption{EMF CBP}
-%            \label{fig:class_diagram_merged_ecbp}
-%        \end{subfigure}
-%        &
-%        \begin{subfigure}[t]{0.31\linewidth}
-%            \includegraphics[width=\linewidth]{class_diagram_merged_emfc}
-%            \caption{EMF Compare}
-%            \label{fig:class_diagram_merged_emfc}
-%        \end{subfigure}
-%        &
-%        \begin{subfigure}[t]{0.31\linewidth}
-%            \includegraphics[width=\linewidth]{class_diagram_merged_emfs}
-%            \caption{EMF Store}
-%            \label{fig:class_diagram_merged_emfs}
-%        \end{subfigure}
-%    \end{tabular}
-%    \caption{Merged models of models in Figure \ref{fig:class_diagram_rpg} after applying all-left-to-right merging.}
-%    \label{fig:class_diagram_merged}
-%\end{figure*}
-
-%\section{Merging}
-%\label{sec:merging}
-%Conflict resolution and merging strategies are out of the scope of this paper. However, it is important to present the merged models of these three approaches in order inspect their correctness. Thus, we present the merged models of the models in Figure \ref{fig:class_diagram_rpg} using these three different approaches. The merge is all-left-to-right merge which means the left changes is prioritised above right changes. In other words, the right changes is applied first to the original model so that the left changes can override the right changes. If there is a conflict then the conflicting right changes are cancelled. In EMF Compare, this cancellation means only the left changes are executed, the right changes are \emph{not executed}, while, in EMF CBP and EMF Store, the right changes are \emph{reversed} so that the affected elements are brought back to their original states.    
-%
-%In the default implementation of EMF Compare, the all-left-to-right merge sets the right model as the target and the left model as the source. This means the left changes are not applied to the original model. Instead, they are applied to the right model. Using this strategy, if we resolve all the conflicts in Table \ref{table:conflicts_emfc} using the all-left-to-right merge, we get a merged model as in Figure \ref{fig:class_diagram_merged_emfc}. All the right events are not executed. Instead, in the right model, class \textsf{character}'s feature \text{name} is set to ``Hero'' and class \textsf{troll}'s feature \textsf{name} is set to ``Ogre''. Also, operation \textsf{cast} and class \textsf{giant} are removed from the right model. The removal of class \textsf{giant} also removes operation \textsf{smash} since the operation is contained by the class in the right model. 
-%
-%For EMF CBP and EMF Store, applying the all-left-to-right merging requires all the right events of the conflicts in Tables \ref{table:conflicts_emfs} and \ref{table:conflicts_cbp} to be reversed. This reversal brings back the states of the elements affected by the conflicting right events to their original states which makes the conflicting left events safe to be applied to the original model. All right events are applied first followed by the reversed conflicting right events and then by all left events (see Listings \ref{lst:cbp_merged_emfs} and \ref{lst:cbp_merged_ecbp}). In this order, the events are applied to the original model, not the right model as in the EMF Compare, to produce the merged model.
-%
-%\begin{lstlisting}[firstnumber=1,style=eol,caption={Merged change events of the models in Figure \ref{fig:class_diagram_rpg} and Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} using EMF Store. The commented lines are added only to improve readability.},label=lst:cbp_merged_emfs]
-%#--right events--
-%move target in attack.parameters from 1 to 0
-%remove smash from knight.operations at 0 composite l1
-%add smash to giant.operations at 0 composite l1
-%remove cast from giant.operations at 1 composite l2
-%add cast to mage.operations at 0 composite l2
-%create rightGen type Generalization
-%set rightGen.general to character
-%set troll.generalization to rightGen
-%set character.name from "Character" to "Hero"
-%remove rightGen from troll.generalization composite l3
-%set mage.generalization to rightGen composite l3
-%set troll.name from "Troll" to "Orc"
-%#--reversed conflicting right events--
-%set troll.name from "Orc" to "Troll"
-%remove rightGen from mage.generalization composite l3r
-%set troll.generalization to rightGen composite l3r
-%set character.name from "Hero" to "Character"
-%remove rightGen from troll.generalization
-%set rightGen.general from character to null
-%delete rightGen
-%remove cast from mage.operations at 0 composite l2r
-%add cast to giant.operations at 1 composite l2r
-%remove smash from giant.operations at 0 composite l1r
-%add smash to knight.operations at 0 composite l1r
-%move target in attack.parameters from 0 to 1
-%#--left events--
-%create leftGen type Generalization
-%set leftGen.general to character
-%set troll.generalization to leftGen
-%set character.name from "Character" to "Hero"
-%remove leftGen from troll.generalization composite r1
-%set knight.generalization to leftGen composite r1
-%move target in attack.parameters from 1 to 2
-%unset cast.name from "cast" to null composite r2
-%remove cast from giant.operations at 0 composite r2
-%delete cast composite r2
-%unset giant.name from "Giant" to null composite r2
-%delete giant comp r2
-%set troll.name from "Troll" to "Ogre"
-%\end{lstlisting}
-%
-%\vspace{-20pt}
-%\begin{lstlisting}[firstnumber=1,style=eol,caption={Merged change events (operations) of the models in Figure \ref{fig:class_diagram_rpg} and Listings \ref{lst:cbp_right} and \ref{lst:cbp_left} using EMF CBP. The commented lines are added only to improve readability.},label=lst:cbp_merged_ecbp]
-%#--right events--
-%move target in attack.parameters from 1 to 0
-%remove smash from knight.operations at 0 composite l1
-%add smash to giant.operations at 0 composite l1
-%remove cast from giant.operations at 1 composite l2
-%add cast to mage.operations at 0 composite l2
-%create rightGen type Generalization
-%set rightGen.general to character
-%set troll.generalization to rightGen
-%set character.name from "Character" to "Hero"
-%remove rightGen from troll.generalization composite l3
-%set mage.generalization to rightGen composite l3
-%set troll.name from "Troll" to "Orc"
-%#--reversed conflicting right events--
-%set troll.name from "Orc" to "Troll"
-%remove cast from mage.operations at 0 composite l2r
-%add cast to giant.operations at 1 composite l2r
-%remove smash from giant.operations at 0 composite l1r
-%add smash to knight.operations at 0 composite l1r
-%move target in attack.parameters from 0 to 1
-%#--left events--
-%create leftGen type Generalization
-%set leftGen.general to character
-%set troll.generalization to leftGen
-%set character.name from "Character" to "Hero"
-%remove leftGen from troll.generalization composite r1
-%set knight.generalization to leftGen composite r1
-%move target in attack.parameters from 1 to 2
-%unset cast.name from "cast" to null composite r2
-%remove cast from giant.operations at 0 composite r2
-%delete cast composite r2
-%unset giant.name from "Giant" to null composite r2
-%delete giant comp r2
-%set troll.name from "Troll" to "Ogre"
-%\end{lstlisting}
-%
-%The drawback of the EMF Compare approach is that it set the right model as the target for merging changes resulting the lost of operation \textsf{smash} in the merged model (Figure \ref{fig:class_diagram_merged_emfc}). In contrast, EMF CBP and EMF Store reverse the event that moves operation \textsf{smash} from class \textsf{knight} to class \textsf{giant} so that it moves back operation \textsf{smash} from class \textsf{giant} to class \textsf{knight}. The drawback of EMF Store is that it does not concern about the eventual states produced by the conflicting events. It only concern that a feature has been modified concurrently on both sides identified by the presence of, at least, an event on each side. For example, the eventual states of class \textsf{troll}'s feature \textsf{generalization} are \textsf{null} in the original, left, and right models. However, these are not considered by EMF Store. Instead, it only identifies that there are events on both sides associated to this feature. Thus, conflict \textsf{ES1} in \ref{table:conflicts_emfs} is generated. In consequence, all events related to the feature on the right side, and the events that are part of their composite events, are reversed resulting the exclusion of generalization \textsf{rightGen} from the merged model. This drawback has been addressed by the EMF CBP by checking the equality of the original, left, and right states of the feature. Since they are all equal then there is no conflict between the events. Thus, EMF CBP produces a merged model as in Figure \ref{fig:class_diagram_merged_ecbp}.
-
 
 \section{Evaluation Method}
 \label{sec:evaluation_method}
-This section presents the method that was employed to evaluate the change-based conflict detection approach proposed in this study and discuss the results. In order to assess the performance benefits of the proposed conflict detection, this study has evaluated it against a mature and widely-used state-based model comparison tool, EMF Compare \cite{emfcompare2018developer,eclipse2017compare}, and another implementation of change-based model persistence, EMF Store \cite{koegel2010emfstore}. EMF Store is not included in the model differencing evaluation in Chapter \ref{ch:model_differencing} since it works purely on changes, and it is only designed to identify conflict between changes; not for finding differences between models. 
+This section presents the method that was employed to evaluate the change-based conflict detection approach proposed in this study and discuss the results. In order to assess the performance benefits of the proposed conflict detection, this study has evaluated it against a mature and widely-used state-based model comparison tool, EMF Compare \cite{emfcompare2018developer,eclipse2017compare}, and another implementation of change-based model persistence, EMF Store \cite{koegel2010emfstore}.
 
-Since there are no manually developed, large models persisted in the proposed change-based format yet, the dataset for this experiments was constructed from a large model reverse-engineered from the Eclipse Epsilon project \cite{eclipse2018epsilongit,eclipse2017epsilon}. This model conforms to the Java metamodel \cite{eclipse2018modiscojava} and consists of more than 0.54 million elements with a size of 71.1 MBs when persisted in XMI. Compared to sizes of models in model differencing evaluation in Section \ref{sec:evaluation_6}, the sizes of models in this evaluation is reduced due to slow execution of replaying change events event in EMF Store.
+Since there are no manually developed, large models persisted in the proposed change-based format yet, the dataset for this experiments was constructed from a large model reverse-engineered from the Eclipse Epsilon project \cite{eclipse2018epsilongit,eclipse2017epsilon}. This model conforms to the Java metamodel \cite{eclipse2018modiscojava} and consists of more than 0.54 million elements with a size of 71.1 MBs when persisted in XMI. We aimed for larger sizes of models, but, due to slow execution of replaying change events event in EMF Store, we stayed with the current sizes as they are large enough to identify clearly the performance gaps between the approaches.
 
 The original model was cloned to produce two new (left and right) models and perform operations (\textsf{add}, \textsf{remove}, \textsf{move}, \textsf{set} with random elements, features, indexes, and values) on both models to create differences. In the evaluation, 0.44 million artificial changes were applied to each model, generating almost 0.5 million events (one operation can generate more than one event, e.g. a \textsf{move} between features generates \textsf{remove} and \textsf{add} events). Events generated by the changes were persisted in the proposed change-based format (to be used later in change-based model comparison). After every 20,000 changes, a measurement point is made. The eventual state of the models were persisted in state-based format (to be used later in state-based model comparison) and then conflict detection using EMF Compare, EMF Store, and EMF CBP were performed and their execution time and memory footprint were measured. In one experiment, 22 measurement points to capture their trends. For EMF Store, the changes persisted in EMF CBP format were imported into EMF Store by replaying them in the EMF Store; equivalent changes could be obtained but executed on EMF Store. 
 
@@ -1508,18 +1383,18 @@ homogeneous type change events -- isolated from other types -- were performed pe
 
 For conflict detection in EMF CBP, the conflict detection time comprises loading change events, constructing an element tree, and computing conflicts. The memory footprint is the space used to hold the change events, element tree, and conflicts in memory. For EMF Compare, the comparison time comprises matching elements and identifying differences, and the memory footprint is the space required to hold the matches and differences in memory. For EMF Store, the conflict detection time comprises loading and mapping change events and computing conflicts. The memory footprint is the space used to hold the change events and mapping and conflicts in memory.
 
-All measurements were performed on the same machine with the following specification: Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz (56 processors), 528 GBs main memory, Ubuntu 16.04.6 LTS operating system, and OpenJDK Runtime Environment (build 1.8.0\_222-8u222-b10-1ubuntu2~16.04.york0-b10) with JVM \textsf{InitialHeapSize} 2 GBs and \textsf{MaxHeapSize} 32 GBs.
+All measurements were performed on the same machine and software with the following specification: Intel(R) Xeon(R) CPU E5-2680 v4 @ 2.40GHz (56 processors), 528 GBs main memory, Ubuntu 16.04.6 LTS operating system, OpenJDK Runtime Environment (build 1.8.0\_222-8u222-b10-1ubuntu2~16.04.york0-b10) with JVM \textsf{InitialHeapSize} 2 GBs and \textsf{MaxHeapSize} 32 GBs, EMF Store 1.9.0, EMF Compare 3.3.2, MoDisco 1.0.1, and EMF 2.12.0.
 
 \section{Evaluation Results and Discussion}
 \label{sec:evaluation_discussion}
-This section reports on the obtained results in terms of comparison time and memory footprint for conflict detection. 
+This section reports and discuss the results obtained from the evaluation in terms of execution time and memory footprint of EMF CBP, EMF Compare, and EMF Store in detecting conflicts. 
 
 \subsection{Mixed Operations}
 \label{sec:mixed-operation_conflict}
 
-In the mixed operation measurement, we modify two identical models differently by applying random operations. As the number of change events generated by the modification grows, the numbers of affected elements and differences also increase in a logarithmic manner. The patterns can be seen in Figure \ref{fig:modification_course}. The growth is logarithmic since the probability that the random operations modify the same elements also increases. Thus, some change events might not contribute to the addition of new affected elements and differences. In other words, more events are required to increase the number of affected elements or differences. In Figure \ref{fig:modification_course}, the total elements remains largely unchanged due to the equal probabilities of addition and deletion as has been set in Section \ref{sec:evaluation_7}. The figure gives us an insight about the characteristics of the modification caused by the random operations in the mixed operation measurement; it supports explaining the implication of the changes on execution time and memory footprints of model comparison.
+In the mixed operation measurement, we modify two identical models differently by applying random operations. As the number of change events generated by the modification grows, the numbers of affected elements and differences also increase in a logarithmic manner. The patterns can be seen in Figure \ref{fig:conflict-size-events}. The growth is logarithmic since the probability that the random operations modify the same elements also increases. Thus, some change events might not contribute to the addition of new affected elements and differences. In other words, more events are required to increase the number of affected elements or differences. In Figure \ref{fig:conflict-size-events}, the total elements remains largely unchanged due to the equal probabilities of addition and deletion as has been set in Section \ref{sec:evaluation_method}. The figure gives us an insight about the characteristics of the modification caused by the random operations in the mixed operation measurement; it supports explaining the implication of the changes on execution time and memory footprints of model comparison.
 
-Similar to the results in the model differencing evaluation (Figure \ref{fig:modification_course}), the growing number of change events in the conflict detection evaluation is also followed by the logarithmic increase of affected elements (Figure \ref{fig:conflict-size-events}). The total number of both elements can also be kept relatively constant due to 1:1 ratio of \textsf{add} and \textsf{delete} operations' occurrence. These change events produce different numbers of conflicts for EMF CBP, EMF Compare, and EMF Store as can be seen in Figure \ref{fig:conflict-count-events}. The differences are due to their distinct conflict detection approaches. EMF Compare detects less conflicts than EMF CBP and EMF Store since its change events are derived, not the real changes. EMF Store detects less conflicts than EMF CBP since its conflicts that depends to each other are grouped into one conflict.
+The growing number of change events in the conflict detection evaluation is followed by the logarithmic increase of affected elements (Figure \ref{fig:conflict-size-events}). The total number of both elements can also be kept relatively constant due to 1:1 ratio of \textsf{add} and \textsf{delete} operations' occurrence. These change events produce different numbers of conflicts for EMF CBP, EMF Compare, and EMF Store as can be seen in Figure \ref{fig:conflict-count-events}. The differences are due to their distinct conflict detection approaches. EMF Compare detects less conflicts than EMF CBP and EMF Store since its change events are derived, not the real changes. EMF Store detects less conflicts than EMF CBP since its conflicts that depends to each other are grouped into one conflict.
 
 \begin{figure*}[ht]
   \centering
@@ -1552,7 +1427,7 @@ Similar to the results in the model differencing evaluation (Figure \ref{fig:mod
 
 Figure \ref{fig:conflict-time-events} exhibits EMF CBP outperforms EMF Compare and EMF Store in terms of execution time in detecting conflicts, even when the number of change events approaching a million. EMF Store is the worst. It takes more than 35 seconds even though the number of change events has just reached 0.1 millions. Figure \ref{fig:conflict-memory-events} also shows EMF CBP outmatches EMF Compare and EMF Store in terms of memory footprint in conflict detection. At the last measurement point, a million change events, EMF CBP only consumes 6 GBs which is much lesser than EMF Compare and EMF Store. EMF Compare occupies around 16 GBs while EMF Store already consumes the same amount of memory footprint only for 0.5 million change events.
 
-\begin{figure}[]
+\begin{figure*}[]
   \centering
   \begin{minipage}[b]{0.490\textwidth}
     \includegraphics[width=\linewidth]{ecbp-conflict-time-events}
@@ -1565,9 +1440,9 @@ Figure \ref{fig:conflict-time-events} exhibits EMF CBP outperforms EMF Compare a
     \caption{A breakdown view of EMF CBP on the memory footprint for conflict detection.}
     \label{fig:ecbp-conflict-memory-events}    
   \end{minipage}  
-\end{figure}
+\end{figure*}
 
-\begin{figure}[]
+\begin{figure*}[]
   \centering
   \begin{minipage}[b]{0.490\textwidth}
     \includegraphics[width=\linewidth]{emfc-conflict-time-events}
@@ -1580,9 +1455,9 @@ Figure \ref{fig:conflict-time-events} exhibits EMF CBP outperforms EMF Compare a
     \caption{A breakdown view of EMF Compare on the memory footprint for conflict detection.}
     \label{fig:emfc-conflict-memory-events}
   \end{minipage}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[]
+\begin{figure*}[]
   \begin{minipage}[b]{0.490\textwidth}
     \includegraphics[width=\linewidth]{emfs-conflict-time-events}
     \caption{A breakdown view of EMF Store on the time required for conflict detection.}
@@ -1594,7 +1469,7 @@ Figure \ref{fig:conflict-time-events} exhibits EMF CBP outperforms EMF Compare a
     \caption{A breakdown view of EMF Store on the memory footprint for conflict detection.}
     \label{fig:emfs-conflict-memory-events}
   \end{minipage}
-\end{figure}
+\end{figure*}
 
 Figures \ref{fig:ecbp-conflict-time-events}, \ref{fig:emfc-conflict-time-events}, and \ref{fig:emfs-conflict-time-events} show the detailed view of EMF CBP, EMF Compare, and EMF Store on the time required to complete conflict detection. As can be seen in Figure \ref{fig:ecbp-conflict-time-events}, the time for EMF CBP to load change events, construct element tree, and detect conflicts grows linearly. In detecting conflicts, the EMF CBP does not requires to perform differencing since changes are already available in the form of change events. Thus, the differencing is not included in the diagram. 
 
@@ -1704,11 +1579,13 @@ Figure \ref{fig:change-conflict-count-events} shows the results of the change-on
 
 In the delete-only experiment in Figure \ref{fig:delete-conflict-count-events}, EMF CBP and EMF Compare detect more conflicts than EMF Store since they do not put a conflict that depends on another conflict into one group as performed by EMF Store. For example, the deletion of elements \textsf{cast} and \textsf{giant}, as showed in Tables \ref{table:emfc_conflicts} (EC3 and EC4) and \ref{table:conflicts_cbp} (CB3 and CB4), are separated into two conflicts while EMF Store merges both deletion into one conflict since both are in the same composite event \textsf{l2} (see conflict ES4 in Table \ref{table:conflicts_emfs}). As the number of change events grows, the number of conflicts that share the same change events also increases. Thus, these conflicts are grouped into one conflict causing the number of conflicts decreasing. In addition, EMF CBP detects fewer conflicts than EMF Compare since it skips calculating conflicts for features and values of an element that have been deleted. Change events that affects the features and values have been included when calculating conflicts caused by the deletion of the element as has been explained in the last paragraph of Section \ref{sec:delete_conflict}. In contrast, EMF Compare treats the conflicts at the features and values of the deleted element as separate conflicts. 
 
-%Also, after an investigation, it is found that there is a bug in EMF Store that it cannot detect conflicts that involve deletion of elements in bidirectional features (error on reading element ids). This causes EMF Store detects less conflicts than EMF CBP in delete-only experiment. 
-
 Figure \ref{fig:move-conflict-count-events} shows the results of the move-only experiment. EMF CBP detects more conflicts than EMF Compare since it has change events than EMF Compare. In EMF Compare, its change events are derived and effective which means minimum number of change events are produced. Less number of change events means less probable to produce conflicts and \texttt{vice versa}. EMF Store detects less conflicts than EMF CBP and EMF Store due to grouping of conflicts that depend to each other. 
 
-%Figure \ref{fig:move-conflict-count-events} shows the results of the move-only experiment. With the same reason to the results in the delete-only experiment -- conflicts are not grouped, EMF Compare detects more conflicts than EMF Store and EMF CBP. Specifically to EMF Store, it detects less conflicts than EMF CBP. After deeper investigation on the technical level, it is found that EMF Store cannot detect conflicts between left and right move events applied to a same element, if there is another change event that precedes or has been applied to the feature that contains the element. A conflict can only be detected if the left and right move events are the first events applied to the element.
+\subsection{Limitations and Validity}
+\label{sec:limitation_and_Threat_to_validity}
+This work has only tested the proposed algorithms on synthesised models which were reversed engineered only from one real-world software project, Epsilon \cite{eclipse2018epsilongit}. The generated models may not be representative of the complexity and interconnectedness of models in other domains. Diverse characteristics of models in different domains can affect the effectiveness of the algorithm and therefore yield different outcomes. Moreover, the generated models from the reverse engineering are limited to Modisco Java \cite{eclipse2018modiscojava} metamodel only. Thus, there is no guarantee it will perform in a consistent manner on models conforming to different metamodels.
+
+For the proposed conflict detection solution, this work has tried to cover as much as common changes made in EMF models (e.g. performing \textsf{add}/\textsf{remove}/\textsf{set}/\textsf{move} operations on \textsf{single}/\textsf{multi}-\textsf{valued} features, \textsf{attribute}/\textsf{reference} features, or \textsf{containment}/\textsf{non}-\textsf{containment} references), the random modification made in the evaluation does not largely reflect the evolution of models in the real world. This is challenging as different domains can have their own patterns of model evolution -- different problems, metamodels, modellers, etc. So far, the most complex composite changes applied to the random modification are limited to \textsf{move} and \textsf{delete} changes only (\textsf{move} event consists of \textsf{remove} and {add} events, while \textsf{delete} event also removes the sub-elements of the deleted element). More complex composite changes, such as refactoring has not been evaluated. Also, the random modification does not consider the correctness of the changes since it might certain constraints of the models. For example, in Java \cite{eclipse2018modiscojava} models, removing a parameter from a function causes errors in the function's body but are ignored in the evaluation. 
 
 \section{Related Work}
 \label{sec:related_work}
@@ -1737,7 +1614,6 @@ and still has limited support for standard, text-based version controls for coll
 These downsides can be addressed by developing a change-based persistence plugin for a specific development environment 
 (e.g. Eclipse) and persisting changes in text-based format to support text-based version controls (e.g. Git, SVN).
 
-%3-layer metamodelling architectures such as EMF and MOF. 
 \begin{table*}[t!]
   \centering
   \caption{The advantages and downsides between change-based and state-based persistence.}
@@ -1800,9 +1676,7 @@ Compared to change-based persistence, state-based persistence has several downsi
 the advantages and downsides between change-based and state-based persistence are presented in
 Table \ref{table:advantages_drawbacks}.
 
-By default, modelling tools that support the 3-layer metamodelling architectures of Eclipse Modelling Framework (EMF) \cite{steinberg2008emf} employ state-based persistence to persist models in Metadata Interchange (XMI) format. XMI is a standard issued by Object Management Group (OMG) for exchanging metadata information via Extensible Markup Language (XML) \cite{omg2018xmi}. 
-
-There are several non-XMI approaches to state-based model persistence that use relational or NoSQL databases. For example, EMF Teneo \cite{eclipse2017teneo} persists EMF models in relational databases, while Morsa \cite{DBLP:conf/models/Espinazo-PaganCM11} persist models in documents with MongoDB backend \cite{mongodb}, and NeoEMF \cite{daniel2016neoemf} persists models in multi NoSQL backends (Graph, Map, Column). However, none of these approaches provides built-in support for versioning and models are eventually stored in binary files/folders which are known to be a poor fit for text-oriented version control systems like Git and SVN. Connected Data Objects (CDO) \cite{eclipse2019cdo}, which provides support for database-backed model persistence, also provides collaboration facilities, but CDO adoption necessitates the use of a separate version control system (e.g. a Git repository for code and a CDO repository for models), which introduces fragmentation and administration challenges \cite{barmpis2014evaluation}. Similar challenges arise in relation to other model-specific version control systems such as EMFStore \cite{koegel2010emfstore}.
+By default, modelling tools that support the 3-layer metamodelling architectures of Eclipse Modelling Framework (EMF) \cite{steinberg2008emf} employ state-based persistence to persist models in Metadata Interchange (XMI) format. XMI is a standard issued by Object Management Group (OMG) for exchanging metadata information via Extensible Markup Language (XML) \cite{omg2018xmi}. There are several non-XMI approaches to state-based model persistence that use relational or NoSQL databases. For example, EMF Teneo \cite{eclipse2017teneo} persists EMF models in relational databases, while Morsa \cite{DBLP:conf/models/Espinazo-PaganCM11} persist models in documents with MongoDB backend \cite{mongodb}, and NeoEMF \cite{daniel2016neoemf} persists models in multi NoSQL backends (Graph, Map, Column). However, none of these approaches provides built-in support for versioning and models are eventually stored in binary files/folders which are known to be a poor fit for text-oriented version control systems like Git and SVN. Connected Data Objects (CDO) \cite{eclipse2019cdo}, which provides support for database-backed model persistence, also provides collaboration facilities, but CDO adoption necessitates the use of a separate version control system (e.g. a Git repository for code and a CDO repository for models), which introduces fragmentation and administration challenges \cite{barmpis2014evaluation}. Similar challenges arise in relation to other model-specific version control systems such as EMFStore \cite{koegel2010emfstore}.
 
 The history of diffing can be tracked back to the presence of \textsf{diff} program on Unix or Unix-like platform \cite{hunt1976algorithm}. The program can perform diffing that is comparing text files ``in order to determine how or whether they differ'' \cite{diff}. Diffing basically is about finding the longest common subsequence between two or more sequences which commonly known as the Longest Common Subsequence (LCS) algorithms \cite{bergroth2000lcs}. This problem is equivalent to the Shortest Edit Script (SES) problem that is to find the smallest number of editing (add and delete) in order to make a sequence equal to another sequence \cite{DBLP:journals/algorithmica/Meyers86}. LCS or SES algorithms are commonly implemented by Version Control Systems, such as SVN \cite{svn-diff} and Git \cite{git-diff}, in their \textsf{diff} programs to identify differences between versions of files.   
 
@@ -1814,24 +1688,17 @@ This work does not aware of any other work that targets comparison of change-bas
 
 \section{Conclusions and Future Work}
 \label{sec:conclusions_and_future_work}
-Through persisting models' change history, this research aims at enabling high-performance incremental model processing in collaborative development settings. The proposed approach also has the potential to enable model analytics, more fine-grained tracing, and to improve the precision and performance of model comparison and merging. A prototype implementation of a change-based persistence format has been presented and the main envisioned challenges have been listed. 
+Through persisting models' change history, this research aims at enabling high performance model conflict detection. The proposed approach also has the potential to enable model analytics, more fine-grained tracing, and faster incremental model management. 
 
-This work has presented an approach to model differencing by exploiting the nature of change-based persistence which allows us to find differences between versions of a model by only comparing the last set of changes between the two versions.
+In order to persist models in change-based format, this work captures changes applied to models using the notification facility provided by the EMF framework; an event-listener-like feature that produces notification every time a model is modified. Every relevant change event (set, unset, add, remove, move, create, and delete) is captured and then persisted (appended) to a file when saving operation is performed. The change events are persisted in the XML-like format in order simplify the loading of change-based models. 
 
-The change-based model differencing consists of three phases: event loading, element tree construction, and diff computation. In the event loading phase, the implementation loads change events recorded in two change-based model persistence files into memory starting from the line their change events are different. The information contained in the loaded change events are used to construct an element three. An element three essentially is the partial states -- only the affected elements and features -- of the two versions being compared including the shared original version. It is possible since change events are designed to contain adequate information to construct the element three. A model computation is then executed to identify the differences using a set of predefined rules (i.e., if an element is created in one of the versions it means that the element does not exists in the other version as well as in the original version).
+This work has presented an approach to speed up model conflict detection by exploiting the nature of change-based persistence which allows us to find differences between versions of a model only by comparing the last set of changes between the two versions. The change-based model conflict detection consists of three phases: event loading, element tree construction, and conflict computation. In the event loading phase, the implementation loads change events recorded in two different change-based model persistence into memory starting from the line that their change events are different -- not all change events are loaded. The information that the loaded change events contain are used to construct an element three. An element three essentially is the partial states -- only the affected elements and features -- of the two versions being compared including the shared original version. It is possible since change events are designed to contain adequate information to construct the element three. A conflict computation is then executed to identify conflict between change events. It by comparing the eventual states of elements and features between the two versions as well as the original version that are affected by the change events. It also consists of a set of rules that compares the eventual states of the elements and features in the element tree as well as the number of change events that affects them in both versions. As an example, a feature that is modified only in one version cannot have conflicts. A conflict only occurs if the feature is modified on both versions. Also since the the element tree also records every change event to the elements of features that it affect, we can trace change events that cause a conflict.
 
-The evaluation results suggest that the the proposed change-based model differencing executes faster than traditional, state-based model differencing.
-However, the change-based model differencing needs to load change events from a change-based persistence into main memory and thus may requires more memory than for state-based state-based model differencing. In our evaluation, this occurs when the number of change events exceeds 400,000 (around 40 MBs appended change events; not the total size). Arguably, diff and merge operations are usually performed on smaller deltas than this work's evaluation.
+Based on the findings in the conflict detection evaluation, this study found that the proposed change-based model conflict detection approach outperforms the conflict detection approaches in EMF Compare and EMF Store. Nevertheless, models that have been excessively modified or experience significant reduction on model size could impair the performance of the conflict detection as a great number of change records have to be read and loaded into memory. 
 
- Similar to change-based model differencing in the previous research question (RQ2), this work also has proposed an approach to model conflict detection by exploiting the nature of change-based persistence which allows us to detect conflict between versions of a model by only comparing the eventual states of elements and features between the two versions as well as the original version that are affected by the change events.
+The proposed change-based model persistence also comes with a number of challenges that this research needs to overcome, such as loading overhead and fast-growing model files. Even though the loading overhead has been addressed in \cite{DBLP:conf/models/YohannisRPK18}, the proposed approach still needs to load change events to construct an \textsf{elementTree} to perform conflict detection. For future work, this loading can be further optimised to consume less memory and speed up parsing, such as using binary or optimised text format.
 
-The phases in the change-based conflict detection is similar to the phases in the change-based model differencing except that the diff computation is replaced with conflict computation. It also consists of a set of rules that compares the eventual states of the elements and features in the element tree as well as the number of change events that affects them in both versions. Asn example, a feature that is modified only in one version cannot have conflicts. A conflict only occurs if the feature is modified on both versions. Also since the the element tree also records every change event to the elements of features that it affect, we can trace change events that cause a conflict.
-
-Based on the findings in conflict detection evaluation, this study found that the proposed change-based model conflict detection approach outperforms the conflict detection approaches in EMF Compare and EMF Store. Nevertheless, models that have been excessively modified or experience significant reduction on model size could impair the performance of the conflict detection as a great number of change records have to be read and loaded into memory. 
-
-The proposed change-based model persistence also comes with a number of challenges that this research needs to overcome, such as loading overhead and fast-growing model files. The loading overhead has been addressed in this work by introducing hybrid model persistence -- using state and change-based persistence side-by-side -- in which models are loaded from its state-based persistence. Nevertheless, the proposed approach still needs to load change events in order to construct an \textsf{elementTree} -- Section \ref{sec:tree_construction} -- to perform model differencing and conflict detection, as discussed in Chapters \ref{ch:model_differencing} and \ref{ch:conflict_detection}. The loading can be further optimised to consume less memory and speed up parsing, such as using binary or optimised-text format.
-
-The fast-growing model files challenge has not been addressed in this work. Persisting models in a change-based format means that model files will keep growing in size during their evolution significantly faster than their state-based counterparts. This work proposes two solutions to address the issue: (1) sound change-compression operations (e.g. remove older/unused information) that can be used to reduce the size of a model in a controlled way, (2) a compact textual format that will minimise the amount of space required to record a change (a textual line-separated format is desirable to maintain compatibility with file-based version control systems). 
+The fast-growing model files challenge is also potential future work to be addressed. Persisting models in a change-based format means that model files will keep growing in size during their evolution significantly faster than their state-based counterparts. This work proposes two solutions to address the issue: (1) sound change-compression operations (e.g. remove older/unused information) that can be used to reduce the size of a model in a controlled way, (2) a compact textual format that will minimise the amount of space required to record a change (a textual line-separated format is desirable to maintain compatibility with file-based version control systems). 
 
 The information contained in change-based model persistence is also useful for Model Analytics. With appropriate tool support, modellers will be able to ``replay" (part of) the change history of a model (e.g. to understand design decisions made by other developers, for training purposes). In state-based approaches, this can be partly achieved if models are stored in a version-control repository (e.g. Git). However, the granularity would only be at the commit level. By analysing models serialised in the proposed representation, modelling language and tool vendors will be able to develop deeper insights into how modellers actually use these languages/tools in practice and utilise this information to guide the evolution of the language/tool. By attaching additional information to each session (e.g. the id of the developer, references to external documents/URLs), sequences of changes can be traced back to the developer that made them, or to requirements/bug reports that triggered them.
 
