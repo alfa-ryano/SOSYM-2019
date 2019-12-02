@@ -200,6 +200,13 @@ In terms of performance, our previous study \cite{yohannis2019efficient} has fou
 
 \begin{figure*}[]
   \centering
+  \includegraphics[width=0.7\linewidth]{miniuml_metamodel}
+  \caption{An excerpt of the UML-like metamodel of the running example in Figure \ref{fig:class_diagram_rpg}.}
+  \label{fig:miniuml_metamodel}
+\end{figure*}
+
+\begin{figure*}[]
+  \centering
   \begin{subfigure}[t]{0.31\linewidth}
     \includegraphics[width=\linewidth]{class_diagram_origin}
     \caption{original version (Jane's version)}
@@ -230,7 +237,7 @@ Section \ref{sec:existing_conflict_detections} discusses how state-of-the-art to
 \section{Running Example}
 \label{sec:running_example}
 
-Before going deeper into how change-based persistence is and discusses future work, this paper introduces a running example. Figure \ref{fig:class_diagram_rpg} shows three versions of an incomplete model conforming to a simplified UML-like metamodel. This example is used throughout this paper to explain the solutions proposed and how conflict detection are performed in the related work, such as in EMF Compare \cite{emfcompare2018developer} and EMF Store \cite{emfstore2019what}. 
+Before going deeper into how change-based persistence is and discusses future work, this paper introduces a running example. Figure \ref{fig:class_diagram_rpg} shows three versions of an incomplete model conforming to a simplified UML-like metamodel in Figure \ref{fig:miniuml_metamodel}. The metamodel is minimalist only to facilitate explaining the running example. This example is used throughout this paper to explain the solutions proposed and how conflict detection are performed in the related work, such as in EMF Compare \cite{emfcompare2018developer} and EMF Store \cite{emfstore2019what}. 
 
 In our scenario, Jane has set up the initial model of a Role Playing Game (RPG) (Figure \ref{fig:class_diagram_origin}). She then assigned this work to Bob and Alice. Both of Alice and Bob continued to work on the model and made some modifications producing the models in Figures \ref{fig:class_diagram_left} and \ref{fig:class_diagram_right} respectively. Persisting these models in the standard XMI \cite{omg2018xmi} format produces three files as shown in Listings \ref{lst:xmimodel_origin}, \ref{lst:xmimodel_left}, and \ref{lst:xmimodel_right}. In this running example, every element has its globally unique id. Thus, if Bob and Alice create two elements independently, they will not be allocated the same id. For example, the generalizations that Bob and Alice added in Listings \ref{lst:xmimodel_left} and \ref{lst:xmimodel_right} have different ids, \textsf{leftGen} and \textsf{rightGen} respectively.  
 
@@ -305,7 +312,7 @@ An alternative way of persisting these three models would be to persist, instead
 To illustrate the proposed approach, Listing \ref{lst:xmimodel_left} shows a state-based representation of the model of Figure \ref{fig:class_diagram_left} in (simplified) XMI, and Listing \ref{lst:cbp_left_full} shows the proposed equivalent change-based representation of the same model. Instead of persisting a snapshot of the model's state, the representation of Listing \ref{lst:cbp_left_full} captures the complete sequence of change events (create/set/add/move/remove/delete) that were performed on the model since its creation, organised in editing sessions. There are two editing session in the case of this model: session at line 1 marks the editing made by Jane until line 29. Replaying these changes produces Jane's model in Figure \ref{fig:class_diagram_origin}. The rest of the change events are the modification performed by Bob on Jane's model. Replaying all the changes, all Jane's and Bob's changes, produces the same state as the one captured in Listing \ref{lst:xmimodel_left} or Figure \ref{fig:class_diagram_left}. Thus, we can conclude that the proposed change-based representation carries at least as much information as the state-based representation. 
 
 \vspace{-20pt}
-\begin{lstlisting}[style=eol,escapechar=|,caption={The complete version of Bob's change events.},label=lst:cbp_left_full]
+\begin{lstlisting}[style=eol,escapechar=|,caption={The complete change events of Bob's model in Figure \ref{fig:class_diagram_left}.},label=lst:cbp_left_full]
 session "Jane-01"
 create character type Class
 set character.name from null to "Character" 
@@ -381,6 +388,8 @@ A prototype \cite{epsilonlabs2019emfcbp} of the change-based model persistence f
 
 Since not all change events are relevant to change-based persistence (e.g. EMF also produces change notifications when listeners/adapted are added/removed from the model), we have defined a set of event classes to represent events of interest. The event classes are depicted in Figure \ref{fig:events} as subclasses of the \textsf{ChangeEvent} abstract class.
 
+EMF has dedicated classes to express the graph structure of a model, such as \textsf{EStructuralFeature} can be \textsf{EReference} or \textsf{EAttribute}, it can have single value or multi values (e.g., Integer, String), the value(s) of \textsf{EStructuralFeature} can be type of \textsf{EObject} or primitive, the \textsf{EReference} can be type of containment or non-containment, and etc. These characteristics drive the design of the prototype to have different subclasses of \textsf{ChangeEvent} also decide which attributes and methods should be defined in the class. 
+
 The \textsf{ChangeEvent} class has a multi-valued \textsf{values} attribute which can accommodate both single-valued (e.g. set/add) or multi-valued events (e.g. addAll/removeAll). \textsf{ChangeEvent} can also accommodate different types of values, such as \textsf{EObject}s for \textsf{EReferenceEvents}, and primitive values (e.g. Integer, String) for \textsf{EAttributeEvents}. The \textsf{ChangeEvent} class also has a position attribute to hold the  index of an \textsf{EObject} or a literal when they are added to a \textsf{Resource}, \textsf{EReference}, or \textsf{EAttribute} with multiple values. 
 
 Every time an \textsf{EObject} is added to the model, a globally unique id is assigned to the \textsf{EObject}, and a \textsf{CreateEObjectEvent} and an \textsf{AddToResourceEvent} are recorded. When an EObject is deleted, or moved to a containment \textsf{EReference} elsewhere in the model, a \textsf{RemoveFromResourceEvent}
@@ -410,7 +419,10 @@ public class ChangeEventAdapter extends EContentAdapter {
 
 The \textsf{ChangeEventAdapter} receives EMF change notifications in its \textsf{notifyChanged()} method and filters and transforms them into appropriate change events. As an example of how notifications are filtered and transformed, Listing \ref{lst:javacode} shows how the prototype handles \textsf{Notification.UNSET} events based on the type of the changed feature i.e. an \textsf{UnsetEAttributeEvent} is instantiated if the feature of the notifier is an \textsf{EAttribute}, or an \textsf{UnsetEReferenceEvent}  is created if the notifier is an \textsf{EReference}. The transformed instances are then stored into a list of events in \textsf{ChangeEventAdapter} (\textsf{changeEvents}) for persistence. 
 
-To integrate seamlessly with the EMF framework and to eventually support multiple concrete change-based serialisation formats (e.g. XML-formatted representation for readability and binary for performance/size), the prototype implemented a \textsf{CBPResource} abstract class, that extends EMF's built-in \textsf{ResourceImpl} class. The role of the abstract class is to encapsulate all change recording functionality while the role of its concrete subclasses is to implement serialisation and de-serialisation. For example, \textsf{CBPXMLResourceImpl} persists changes in a line-based format where every change is serialised as a single-line XML document. In this way, when a model changes, the prototype can append the new changes to the end of the model file without needing to serialise the entire model again. The prototype also includes a \textsf{CBPXMLResourceFactory} class that extends EMF's \textsf{ResourceFactoryImpl}, as the factory class for change-based models. Figure \ref{fig:resources} shows the relationships between these classes.
+To integrate seamlessly with the EMF framework and to eventually support multiple concrete change-based serialisation formats (e.g. XML-formatted representation for readability and binary for performance/size), the prototype implemented a \textsf{CBPResource} abstract class, that extends EMF's built-in \textsf{ResourceImpl} class. The role of the abstract class is to encapsulate all change recording functionality while the role of its concrete subclasses is to implement serialisation and de-serialisation. 
+To save a model, \textsf{CBPXMLResourceImpl} persists changes in a line-based format where every change is serialised as a single-line XML document. In this way, when a model changes, the prototype can append the new changes to the end of the model file without needing to serialise the entire model again. 
+To load a model, \textsf{CBPXMLResourceImpl} de-serialises every line in the document as a change event and then re-execute it to re-construct the model.
+The prototype also includes a \textsf{CBPXMLResourceFactory} class that extends EMF's \textsf{ResourceFactoryImpl}, as the factory class for change-based models. Figure \ref{fig:resources} shows the relationships between these classes.
 
 \begin{figure}[th]
   \centering
