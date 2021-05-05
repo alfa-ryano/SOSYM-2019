@@ -179,7 +179,7 @@
     \and School of Computing and Maths, Keele University, United Kingdom
     \and Department of Computer Science, Kalbis Institute, Indonesia}
 %
-\date{Received: 1 July 2019 / Revised version: 1 August 2019}
+\date{Received: 1 July 2021 / Revised version: 1 August 2021}
 % The correct dates will be entered by the editor
 %
 \maketitle
@@ -192,7 +192,7 @@ Using traditional state-based modelling tools, model management of large models 
 \section{Introduction}
 \label{sec:introduction}
 
-In the context of model-driven engineeringprocesses, models are commonly persisted in state-based formats. In such approaches, model files contain snapshots of the models' contents, and activities like version control and change detection are left to external systems such as file-based version-control systems and model differencing facilities. Activities such as model differencing (identifying parts of two versions of a model that are different) and conflict detection (finding conflicting changes between two versions of a model) are computationally expensive for state-based models \cite{Kolovos:2009:DMM:1564596.1564641} since every element has to be inspected, matched to its respective pair, compared to identify their differences, and checked whether changes in the different versions are inconsistent \cite{emfcompare2018developer}. Element-wise differencing in state-based model versions is inefficient because, in most cases, only a few elements are changed between versions. The inefficiency is greatest in large models, and where mature modules are subject to fine-tuning by different collaborators \cite{selic2003pragmatics}. 
+In the context of model-driven engineering processes, models are commonly persisted in state-based formats. In such approaches, model files contain snapshots of the models' contents, and activities like version control and change detection are left to external systems such as file-based version-control systems and model differencing facilities. Activities such as model differencing (identifying parts of two versions of a model that are different) and conflict detection (finding conflicting changes between two versions of a model) are computationally expensive for state-based models \cite{Kolovos:2009:DMM:1564596.1564641} since every element has to be inspected, matched to its respective pair, compared to identify their differences, and checked whether changes in the different versions are inconsistent \cite{emfcompare2018developer}. Element-wise differencing in state-based model versions is inefficient because, in most cases, only a few elements are changed between versions. The inefficiency is greatest in large models, and where mature modules are subject to fine-tuning by different collaborators \cite{selic2003pragmatics}. 
 
 As an alternative to state-based persistence, models can be persisted in a change-based format that records the full sequence of changes made rather than the model itself. The concept of change-based persistence is not new and has been used to persist changes to software, object-oriented databases, and hierarchical documents \cite{DBLP:journals/entcs/RobbesL07,DBLP:conf/sde/LippeO92,DBLP:conf/caise/IgnatN05}. The change-based approach can improve detecting differences more precisely at the semantic level, by providing finer-granularity information (e.g. types of changes, the order of the changes, 
 elements that were changed, previous values, etc.) and better support to resolve them \cite{mens2002state}. The ordered nature of change-based persistence also means that changes made to a model since its previous version can be identified sequentially without having to inspect every element of the model and compare the model to its previous version. 
@@ -479,7 +479,7 @@ Change-based model persistence also comes with a number of challenges, such as l
 \label{sec:runnnig_example_continue}
 Using the change-based model persistence presented in Section \ref{sec:emf_change_based_persistence}, instead of only persisting the models in Figure \ref{fig:class_diagram_rpg} in state-based format, we can also persist the complete history of changes of the models in change-based format. 
 
-\vspace{-20pt}
+\vspace{-5pt}
 \begin{lstlisting}[style=eol,caption={Change-based representation of the original version in Figure \ref{fig:class_diagram_origin}.},label=lst:cbp_origin]
 session "Jane-01"
 create character type Class
@@ -1435,7 +1435,7 @@ EMF Compare uses model differencing to derive changes -- not the real changes --
 
 Following is the only kind of conflicts detected by EMF Compare but fails to be detected by EMF CBP. 
 \begin{itemize}
-  \item \emph{Derived Move Conflict}. This conflict is the opposite of the Real Move conflict since EMF CBP only records real moves not the derived moves produced by EMF Compare. Thus EMF CBP cannot detect conflicts produced by derived moves.
+  \item \emph{Derived Move Conflict}. This conflict is detected because EMF Compare derives move operations from its diffing computation, which is the opposite of the Real Move conflict since EMF CBP only records real moves. Thus EMF CBP cannot detect conflicts produced by derived moves.
 \end{itemize}
 
 \subsection{EMF CBP vs. EMF Store}
